@@ -1,0 +1,28 @@
+#pragma once
+#include "core/GameState.h"
+#include "core/Tick.h"
+#include "systems/ArmySystem.h"
+#include "systems/EraSystem.h"
+#include "systems/ProductionSystem.h"
+#include "systems/UpgradeSystem.h"
+
+namespace game {
+    // Actual gameplay core. Main actions, buying/clicking/upgrading/
+class GameLogic {
+public:
+    GameLogic();
+
+    void tick(GameState& state, const TickContext& ctx);
+
+    bool clickMain(GameState& state);
+    bool craftUnit(GameState& state, const std::string& unitId, int count = 1);
+    bool buyUpgrade(GameState& state, const std::string& upgradeId);
+    bool advanceEra(GameState& state);
+
+private:
+    ProductionSystem m_production;
+    ArmySystem m_army;
+    UpgradeSystem m_upgrade;
+    EraSystem m_era;
+};
+}  // namespace game
