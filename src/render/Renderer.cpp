@@ -75,4 +75,42 @@ void Renderer::drawSprite(const Texture& tex, const glm::vec2& pos,
                           float rotationRad) {
     m_batch.draw(tex, pos, size, color, rotationRad);
 }
+void Renderer::drawText(const Font& font, std::string_view text,
+                        const glm::vec2& pos, const glm::vec4& color,
+                        float scale) {
+    if (!font.valid()) {
+        return;
+    }
+    const Texture& atlas = font.atlas();
+    const float lineH = font.lineHeight() * scale;
+
+    float penX = pos.x;
+    float penY = pos.y;
+
+    for (char ch : text) {
+        if (ch == '\n') {
+            penX = pos.x;
+            penY += lineH;
+            continue;
+        }
+        if (ch == '\r') {
+            continue;
+        }
+
+        const Glyph* g = font.glyph(ch);
+        if (!g) {
+            continue;
+        }
+
+        if (g->width > 0 && g->height > 0) {
+            const glm::vec2 gpos = {penX + g->xoff * scale,
+                                    penY + g->yoff * scale};
+            const glm::vec2 gsize = {g->width * scale, g->height * scale};
+            const glm::vec4 uv = {g->u0, g->v0, g->u1, g->v1};
+            m_batch.drawUV(atlas, gpos, gsize, uv, color, 0.0f);
+        }
+        penX += g->xadvance * scale;
+    }
+}
+
 }  // namespace game::render

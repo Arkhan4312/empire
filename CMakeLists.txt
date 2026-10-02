@@ -87,12 +87,21 @@ endif()
 if(EMPIRE_BUILD_APP)
 	add_executable(empire
 	src/main.cpp
+	src/core/InputSystem.cpp
+	src/render/stb_impl.cpp
 	src/render/Window.cpp
 	src/render/Shader.cpp
 	src/render/Texture.cpp
 	src/render/SpriteBatch.cpp
 	src/render/Font.cpp
 	src/render/Renderer.cpp
+
+	src/ui/Widgets.cpp
+	src/ui/UIContext.cpp
+
+	src/scenes/SceneManager.cpp
+	src/scenes/MainMenuScene.cpp
+	src/scenes/GameScene.cpp
 	)
 	target_link_libraries(empire PRIVATE 
 	empire_core

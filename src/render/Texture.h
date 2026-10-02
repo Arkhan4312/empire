@@ -16,7 +16,7 @@ public:
     bool loadFromFile(const std::string& path);
 
     bool createSolid(int w, int h, std::uint32_t rgba = 0xFFFFFFFFu);
-
+    bool createRGBA(int w, int h, const unsigned char* pixels);
     void destroy();
 
     void bind(std::uint32_t unit = 0) const;
@@ -39,6 +39,7 @@ public:
     }
 
 private:
+    bool uploadRGBA(int w, int h, const unsigned char* pixels);
     std::uint32_t m_id = 0;
     int m_width = 0;
     int m_height = 0;

@@ -34,4 +34,4 @@
 .vs/
 .out/
 .git/out/*
-/out/build/x64-debug/_deps/catch2-src/tools/misc/SelfTest.vcxproj.user
+/out/build/

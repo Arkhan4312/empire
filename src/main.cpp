@@ -8,6 +8,9 @@
 #include "render/Renderer.h"
 #include "render/Window.h"
 #include "systems/SaveSystem.h"
+#include "core/Input.h"
+#include "core/InputSystem.h"
+#include "render/Font.h"
 
 using namespace game;
 
@@ -44,6 +47,12 @@ int main() {
         return 1;
     }
 
+    InputSystem input;
+    if (!input.attach(window.handle())) {
+        std::fprintf(stderr, "InputSystem attach failed\n");
+        window.destroy();
+        return 1;
+    }
     render::Renderer renderer;
     if (!renderer.init(window)) {
         std::fprintf(stderr, "Renderer init failed\n");
@@ -51,9 +60,18 @@ int main() {
         return 1;
     }
 
+    render::Font font;
+    const bool fontOk = font.loadFromFile(std::string(EMPIRE_ASSETS_DIR) + "/fonts/main.ttf", 28.0f);
+    if (!fontOk) {
+        std::fprintf(stderr, "[Init] font not loaded, running without text\n");
+    }
+  
     double lastTime = window.time();
 
     while (!window.shouldClose()) {
+        input.beginFrame();
+        window.pollEvents();
+
         const double now = window.time();
         double dt = now - lastTime;
         lastTime = now;
@@ -68,15 +86,21 @@ int main() {
         renderer.drawRect({ 40.0f,40.0f }, { 260.0f,90.0f }, { 0.15f,0.35f,0.65f,1.0f });
         renderer.drawRect({ 60.0f,60.0f }, { 220.0f,50.0f }, { 0.95f,0.65f,0.15f,1.0f });
         renderer.drawRect({ 340.0f,40.0f }, { 200.0f,90.0f }, { 0.25f,0.65f,0.35f,1.0f });
+        if (fontOk) {
+            char buf[256];
+            std::snprintf(buf, sizeof(buf), "plastic: %.1f", state.resources.get(ResourceType::PLASTIC));
+            renderer.drawText(font, buf, { 60.0f, 40.0f }, { 1.0f,1.0f,1.0f,1.0f });
+        }
         renderer.endFrame();
 
-        window.pollEvents();
         window.swapBuffers();
     }
 
     state.lastSaveTimestamp = nowSeconds();
     save.save(state, kSavePath);
 
+    font.destroy();
+    input.detach();
     renderer.shutdown();
     window.destroy();
     return 0;

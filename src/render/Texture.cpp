@@ -1,27 +1,32 @@
 #include "render/Texture.h"
 
 #include <glad/glad.h>
+#include <stb_image.h>
 
 #include <cstdio>
 #include <vector>
-
 namespace game::render {
 Texture::~Texture() {
     destroy();
 }
 
 bool Texture::loadFromFile(const std::string& path) {
-    // int w, h, ch;
-    // stbi_set_flip_vertically_on_load(1);
-    // unsigned char* px = stbi_loaad(path.c_str(), &w, &h, &ch, 4);
-    // ............................................................
-    std::fprintf(stderr, "[Texture] (stub) not loading '%s', using 1x1 white\n",
-                 path.c_str());
-    return createSolid(1, 1, 0xFFFFFFFFu);
+    stbi_set_flip_vertically_on_load(0);
+    int w = 0;
+    int h = 0;
+    int channels = 0;
+    unsigned char* pixels = stbi_load(path.c_str(), &w, &h, &channels, 4);
+    if (!pixels) {
+        std::fprintf(stderr, "[Texture] stbi_load failed for '%s': %s\n",
+                     path.c_str(), stbi_failure_reason);
+        return false;
+    }
+    const bool ok = uploadRGBA(w, h, pixels);
+    stbi_image_free(pixels);
+    return ok;
 }
 
 bool Texture::createSolid(int w, int h, std::uint32_t rgba) {
-    destroy();
     if (w <= 0 || h <= 0) {
         return false;
     }
@@ -40,22 +45,14 @@ bool Texture::createSolid(int w, int h, std::uint32_t rgba) {
         pixels[i + 3] = a;
     }
 
-    GLuint id = 0;
-    glGenTextures(1, &id);
-    glBindTexture(GL_TEXTURE_2D, id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 pixels.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+    return uploadRGBA(w, h, pixels.data());
+}
 
-    m_id = id;
-    m_width = w;
-    m_height = h;
-    return true;
+bool Texture::createRGBA(int w, int h, const unsigned char* pixels) {
+    if (!pixels || w <= 0 || h <= 0) {
+        return false;
+    }
+    return uploadRGBA(w, h, pixels);
 }
 
 void Texture::destroy() {
@@ -75,5 +72,25 @@ void Texture::bind(std::uint32_t unit) const {
 
 void Texture::unbind() const {
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+bool Texture::uploadRGBA(int w, int h, const unsigned char* pixels) {
+    destroy();
+
+    GLuint id = 0;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixels);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    m_id = id;
+    m_width = w;
+    m_height = h;
+    return true;
 }
 }  // namespace game::render

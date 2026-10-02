@@ -57,11 +57,11 @@ void SpriteBatch::shutdown() {
         m_vao = 0;
     }
     if (m_vbo) {
-        glDeleteVertexArrays(1, &m_vbo);
+        glDeleteBuffers(1, &m_vbo);
         m_vbo = 0;
     }
     if (m_ibo) {
-        glDeleteVertexArrays(1, &m_ibo);
+        glDeleteBuffers(1, &m_ibo);
         m_ibo = 0;
     }
     m_shader.destroy();
@@ -84,6 +84,12 @@ void SpriteBatch::end() {
 void SpriteBatch::draw(const Texture& tex, const glm::vec2& pos,
                        const glm::vec2& size, const glm::vec4& color,
                        float rotationRad) {
+    drawUV(tex, pos, size, {0.0f, 0.0f, 1.0f, 1.0f}, color, rotationRad);
+}
+
+void SpriteBatch::drawUV(const Texture& tex, const glm::vec2& pos,
+                         const glm::vec2& size, const glm::vec4& uvRect,
+                         const glm::vec4& color, float rotationRad) {
     if (!m_begun) {
         return;
     }
@@ -99,7 +105,7 @@ void SpriteBatch::draw(const Texture& tex, const glm::vec2& pos,
         m_currentTexture = tex.id();
     }
 
-    pushQuad(tex, pos, size, color, rotationRad);
+    pushQuad(tex, pos, size, uvRect, color, rotationRad);
 }
 
 void SpriteBatch::flush() {
@@ -138,9 +144,9 @@ void SpriteBatch::flush() {
     m_indices.clear();
 }
 
-void SpriteBatch::pushQuad(const Texture& tex, const glm::vec2& pos,
-                           const glm::vec2& size, const glm::vec4& color,
-                           float rotationRad) {
+void SpriteBatch::pushQuad(const Texture&, const glm::vec2& pos,
+                           const glm::vec2& size, const glm::vec4& uvRect,
+                           const glm::vec4& color, float rotationRad) {
     const float c = std::cos(rotationRad);
     const float s = std::sin(rotationRad);
     const glm::vec2 half = size * 0.5f;
@@ -155,12 +161,17 @@ void SpriteBatch::pushQuad(const Texture& tex, const glm::vec2& pos,
     const glm::vec2 p2 = rot({half.x, half.y});
     const glm::vec2 p3 = rot({-half.x, half.y});
 
+    const float u0 = uvRect.x;
+    const float v0 = uvRect.y;
+    const float u1 = uvRect.z;
+    const float v1 = uvRect.w;
+
     const auto base = static_cast<std::uint32_t>(m_vertices.size());
 
-    m_vertices.push_back({p0, {0.0f, 0.0f}, color});
-    m_vertices.push_back({p1, {1.0f, 0.0f}, color});
-    m_vertices.push_back({p2, {1.0f, 1.0f}, color});
-    m_vertices.push_back({p3, {0.0f, 1.0f}, color});
+    m_vertices.push_back({p0, {u0, v0}, color});
+    m_vertices.push_back({p1, {u1, v0}, color});
+    m_vertices.push_back({p2, {u1, v1}, color});
+    m_vertices.push_back({p3, {u0, v1}, color});
 
     m_indices.push_back(base + 0);
     m_indices.push_back(base + 1);

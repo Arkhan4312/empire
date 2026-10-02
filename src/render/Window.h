@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdint>
 #include <string>
 
 struct GLFWwindow;
@@ -27,7 +26,9 @@ public:
     }
 
 private:
+
     GLFWwindow* m_handle = nullptr;
     bool m_glfwOwned = false;
+
 };
 }  // namespace game::render

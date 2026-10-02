@@ -1,6 +1,8 @@
 #pragma once
 #include <glm/glm.hpp>
+#include <string_view>
 
+#include "render/Font.h"
 #include "render/SpriteBatch.h"
 #include "render/Texture.h"
 
@@ -21,6 +23,8 @@ public:
                     const glm::vec2& size,
                     const glm::vec4& color = glm::vec4(1.0f),
                     float rotationRad = 0.0f);
+    void drawText(const Font& font, std::string_view text, const glm::vec2& pos,
+                  const glm::vec4& color = glm::vec4(1.0f), float scale = 1.0f);
 
     const Texture& whiteTexture() const noexcept {
         return m_white;

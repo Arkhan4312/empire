@@ -35,11 +35,16 @@ public:
               const glm::vec4& color = glm::vec4(1.0f),
               float rotationRad = 0.0f);
 
+    void drawUV(const Texture& tex, const glm::vec2& pos, const glm::vec2& size,
+                const glm::vec4& uvRect,
+                const glm::vec4& color = glm::vec4(1.0f),
+                float rotationRad = 0.0f);
+
 private:
     void flush();
     void pushQuad(const Texture& tex, const glm::vec2& pos,
-                  const glm::vec2& size, const glm::vec4& color,
-                  float rotationRad);
+                  const glm::vec2& size, const glm::vec4& uvRect,
+                  const glm::vec4& color, float rotationRad);
 
     Shader m_shader;
     std::uint32_t m_vao = 0;
