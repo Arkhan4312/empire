@@ -1,6 +1,7 @@
 #pragma once
+#include <cstdio>
 #include <glm/glm.hpp>
-
+#include <string>
 namespace game {
 namespace keys {
 inline constexpr int Space = 32;
@@ -48,6 +49,16 @@ struct InputState {
         return key >= 0 && key < kMaxKeys && keyReleased[key];
     }
 
+    bool isMouseDown(int b) const noexcept {
+        return b >= 0 && b < 3 && mouseDown[b];
+    }
+    bool isMousePressed(int b) const noexcept {
+        return b >= 0 && b < 3 && mousePressed[b];
+    }
+    bool isMouseReleased(int b) const noexcept {
+        return b >= 0 && b < 3 && mouseReleased[b];
+    }
+
     void beginFrame() noexcept {
         for (auto& b : mousePressed) {
             b = false;
@@ -68,4 +79,72 @@ struct InputState {
         scrollDelta = glm::vec2(0.0f);
     }
 };
+
+inline std::string keyName(int key) {
+    switch (key) {
+        case 32:
+            return "Space";
+        case 39:
+            return "'";
+        case 44:
+            return ",";
+        case 45:
+            return "-";
+        case 46:
+            return ".";
+        case 47:
+            return "/";
+        case 59:
+            return ";";
+        case 61:
+            return "=";
+        case 91:
+            return "[";
+        case 92:
+            return "\\";
+        case 93:
+            return "]";
+        case 96:
+            return "`";
+        case 256:
+            return "Escape";
+        case 257:
+            return "Enter";
+        case 258:
+            return "Tab";
+        case 259:
+            return "Backspace";
+        case 260:
+            return "Insert";
+        case 261:
+            return "Delete";
+        case 262:
+            return "Right";
+        case 263:
+            return "Left";
+        case 264:
+            return "Down";
+        case 265:
+            return "Up";
+        case 266:
+            return "PageUp";
+        case 267:
+            return "PageDown";
+        case 268:
+            return "Home";
+        case 269:
+            return "End";
+        default:
+            break;
+    }
+    if (key >= 48 && key <= 57) return std::string(1, static_cast<char>(key));
+    if (key >= 65 && key <= 90) return std::string(1, static_cast<char>(key));
+    if (key >= 290 && key <= 301) {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "F%d", key - 289);
+        return buf;
+    }
+    return "?";
+}
+
 }  // namespace game

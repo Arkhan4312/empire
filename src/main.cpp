@@ -1,16 +1,22 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 
 #include "content/Content.h"
 #include "core/GameLogic.h"
 #include "core/GameState.h"
-#include "render/Renderer.h"
-#include "render/Window.h"
-#include "systems/SaveSystem.h"
 #include "core/Input.h"
 #include "core/InputSystem.h"
 #include "render/Font.h"
+#include "render/Renderer.h"
+#include "render/Window.h"
+#include "scenes/AppContext.h"
+#include "scenes/MainMenuScene.h"
+#include "scenes/SceneManager.h"
+#include "settings/Settings.h"
+#include "systems/SaveSystem.h"
+#include "ui/UIContext.h"
 
 using namespace game;
 
@@ -24,48 +30,46 @@ int main() {
     const char* kSavePath = "save.json";
 
     GameState state;
-    content::initNewGame(state);
-
     GameLogic logic;
     SaveSystem save;
-
-    if (save.load(state, kSavePath)) {
-        const auto away =
-            SaveSystem::computeOfflineSeconds(state, nowSeconds());
-        if (away > 0) {
-            const double sim = SaveSystem::applyOffline(state, logic, away);
-            std::printf("[Offline] away %llds, simulated %.1fs\n",
-                        (long long)away, sim);
-        }
-    } else {
-        std::printf("[Init] new game\n");
-    }
+    Settings settings;
+    content::initNewGame(state);
 
     render::Window window;
-    if (!window.create(1280, 720, "Empire from Nothing - Core + Gl stub")) {
-        std::fprintf(stderr, "Window creation failed\n");
+    if (!window.create(1280, 720, "Empire from Nothing")) {
         return 1;
     }
 
     InputSystem input;
-    if (!input.attach(window.handle())) {
-        std::fprintf(stderr, "InputSystem attach failed\n");
-        window.destroy();
-        return 1;
-    }
+    input.attach(window.handle());
+
     render::Renderer renderer;
     if (!renderer.init(window)) {
-        std::fprintf(stderr, "Renderer init failed\n");
         window.destroy();
         return 1;
     }
 
     render::Font font;
-    const bool fontOk = font.loadFromFile(std::string(EMPIRE_ASSETS_DIR) + "/fonts/main.ttf", 28.0f);
+    const bool fontOk = font.loadFromFile(
+        std::string(EMPIRE_ASSETS_DIR) + "/fonts/main.ttf", 22.0f);
     if (!fontOk) {
-        std::fprintf(stderr, "[Init] font not loaded, running without text\n");
+        std::fprintf(stderr, "[Init] font not  loaded, running without text\n");
     }
-  
+
+    ui::UIContext uiCtx;
+    uiCtx.renderer = &renderer;
+    uiCtx.font = fontOk ? &font : nullptr;
+    uiCtx.input = &input.state();
+
+    SceneManager scenes;
+    AppContext ctx{
+        state,     logic, save,  settings, window,
+        renderer,  input, uiCtx, scenes,   fontOk ? &font : nullptr,
+        kSavePath,
+    };
+
+    scenes.replace(std::make_unique<MainMenuScene>(), ctx);
+
     double lastTime = window.time();
 
     while (!window.shouldClose()) {
@@ -79,20 +83,19 @@ int main() {
             dt = 0.25;
         }
 
-        TickContext ctx{dt};
-        logic.tick(state, ctx);
+        uiCtx.beginFrame();
+        if (Scene* s = scenes.current()) {
+            s->update(ctx, dt);
+        }
+        scenes.applyPending(ctx);
 
         renderer.beginFrame();
-        renderer.drawRect({ 40.0f,40.0f }, { 260.0f,90.0f }, { 0.15f,0.35f,0.65f,1.0f });
-        renderer.drawRect({ 60.0f,60.0f }, { 220.0f,50.0f }, { 0.95f,0.65f,0.15f,1.0f });
-        renderer.drawRect({ 340.0f,40.0f }, { 200.0f,90.0f }, { 0.25f,0.65f,0.35f,1.0f });
-        if (fontOk) {
-            char buf[256];
-            std::snprintf(buf, sizeof(buf), "plastic: %.1f", state.resources.get(ResourceType::PLASTIC));
-            renderer.drawText(font, buf, { 60.0f, 40.0f }, { 1.0f,1.0f,1.0f,1.0f });
+        if (Scene* s = scenes.current()) {
+            s->render(ctx);
         }
         renderer.endFrame();
 
+        uiCtx.endFrame();
         window.swapBuffers();
     }
 

@@ -73,6 +73,11 @@ void Window::swapBuffers() {
         glfwSwapBuffers(m_handle);
     }
 }
+void Window::requestClose() {
+    if (m_handle) {
+        glfwSetWindowShouldClose(m_handle, GLFW_TRUE);
+    }
+}
 double Window::time() const {
     return glfwGetTime();
 }

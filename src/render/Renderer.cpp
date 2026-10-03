@@ -85,7 +85,7 @@ void Renderer::drawText(const Font& font, std::string_view text,
     const float lineH = font.lineHeight() * scale;
 
     float penX = pos.x;
-    float penY = pos.y;
+    float penY = pos.y + font.ascent()  * scale;
 
     for (char ch : text) {
         if (ch == '\n') {

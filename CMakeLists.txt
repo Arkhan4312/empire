@@ -102,6 +102,7 @@ if(EMPIRE_BUILD_APP)
 	src/scenes/SceneManager.cpp
 	src/scenes/MainMenuScene.cpp
 	src/scenes/GameScene.cpp
+	src/scenes/SettingsScene.cpp
 	)
 	target_link_libraries(empire PRIVATE 
 	empire_core

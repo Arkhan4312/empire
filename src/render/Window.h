@@ -19,6 +19,8 @@ public:
     void pollEvents();
     void swapBuffers();
 
+    void requestClose();
+
     double time() const;
     void framebufferSize(int& w, int& h) const;
     GLFWwindow* handle() const noexcept {
@@ -26,9 +28,7 @@ public:
     }
 
 private:
-
     GLFWwindow* m_handle = nullptr;
     bool m_glfwOwned = false;
-
 };
 }  // namespace game::render
