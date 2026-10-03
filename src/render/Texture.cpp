@@ -83,9 +83,14 @@ bool Texture::uploadRGBA(int w, int h, const unsigned char* pixels) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    GLint prevAlign = 4;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &prevAlign);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                  pixels);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, prevAlign);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     m_id = id;

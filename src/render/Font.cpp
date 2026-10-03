@@ -115,8 +115,8 @@ void Font::destroy() {
     m_ascent = 0.0f;
     m_descent = 0.0f;
     m_lineHeight = 0.0f;
-    for (auto& game : m_glyphs) {
-        game = Glyph{};
+    for (auto& g : m_glyphs) {
+        g = Glyph{};
     }
 }
 const Glyph* Font::glyph(char c) const noexcept {

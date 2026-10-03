@@ -10,5 +10,8 @@ void UIContext::endFrame() {
     if (input && !input->mouseDown[mouse::Left]) {
         active = nullptr;
     }
+    if (mousePressed() && hovered == nullptr) {
+        focused = nullptr;
+    }
 }
 }  // namespace game::ui

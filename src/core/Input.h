@@ -23,17 +23,23 @@ namespace mouse {
 inline constexpr int Left = 0;
 inline constexpr int Right = 1;
 inline constexpr int Middle = 2;
+inline constexpr int Button4 = 3;
+inline constexpr int Button5 = 4;
+inline constexpr int Button6 = 5;
+inline constexpr int Button7 = 6;
+inline constexpr int Button8 = 7;
 }  // namespace mouse
 struct InputState {
     static constexpr int kMaxKeys = 512;
+    static constexpr int kMaxMouseButton = 8;
 
     glm::vec2 mousePos{0.0f, 0.0f};
     glm::vec2 mouseDelta{0.0f, 0.0f};
     glm::vec2 scrollDelta{0.0f, 0.0f};
 
-    bool mouseDown[3] = {false, false, false};
-    bool mousePressed[3] = {false, false, false};
-    bool mouseReleased[3] = {false, false, false};
+    bool mouseDown[kMaxMouseButton] = {};
+    bool mousePressed[kMaxMouseButton] = {};
+    bool mouseReleased[kMaxMouseButton] = {};
 
     bool keyDown[kMaxKeys] = {};
     bool keyPressed[kMaxKeys] = {};
@@ -50,15 +56,15 @@ struct InputState {
     }
 
     bool isMouseDown(int b) const noexcept {
-        return b >= 0 && b < 3 && mouseDown[b];
+        return b >= 0 && b < kMaxMouseButton && mouseDown[b];
     }
     bool isMousePressed(int b) const noexcept {
-        return b >= 0 && b < 3 && mousePressed[b];
+        return b >= 0 && b < kMaxMouseButton && mousePressed[b];
     }
     bool isMouseReleased(int b) const noexcept {
-        return b >= 0 && b < 3 && mouseReleased[b];
+        return b >= 0 && b < kMaxMouseButton && mouseReleased[b];
     }
-
+    // WARNING: call before glfwPollEvents();
     void beginFrame() noexcept {
         for (auto& b : mousePressed) {
             b = false;
@@ -82,7 +88,7 @@ struct InputState {
 
 inline std::string keyName(int key) {
     switch (key) {
-        case 32:
+        case keys::Space:
             return "Space";
         case 39:
             return "'";
@@ -106,25 +112,25 @@ inline std::string keyName(int key) {
             return "]";
         case 96:
             return "`";
-        case 256:
+        case keys::Escape:
             return "Escape";
-        case 257:
+        case keys::Enter:
             return "Enter";
-        case 258:
+        case keys::Tab:
             return "Tab";
-        case 259:
+        case keys::Backspace:
             return "Backspace";
         case 260:
             return "Insert";
         case 261:
             return "Delete";
-        case 262:
+        case keys::Right:
             return "Right";
-        case 263:
+        case keys::Left:
             return "Left";
-        case 264:
+        case keys::Down:
             return "Down";
-        case 265:
+        case keys::Up:
             return "Up";
         case 266:
             return "PageUp";

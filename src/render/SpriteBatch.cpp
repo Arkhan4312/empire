@@ -32,21 +32,36 @@ bool SpriteBatch::init(const std::string& vertPath,
     // location = 0 : vec2 pos
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride,
-                          reinterpret_cast<void*>(0));
+                          reinterpret_cast<void*>(offsetof(Vertex2D, pos)));
     // location = 1 : vec2 uv
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride,
-                          reinterpret_cast<void*>(sizeof(float) * 2));
+                          reinterpret_cast<void*>(offsetof(Vertex2D, uv)));
     // location = 2 : vec4  color
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride,
-                          reinterpret_cast<void*>(sizeof(float) * 4));
+                          reinterpret_cast<void*>(offsetof(Vertex2D, color)));
+
+    {
+        std::vector<std::uint32_t> idx(m_maxQuads * 6);
+        for (std::size_t i = 0; i < m_maxQuads; ++i) {
+            const std::uint32_t b = static_cast<std::uint32_t>(i) * 4u;
+            idx[i * 6 + 0] = b + 0;
+            idx[i * 6 + 1] = b + 1;
+            idx[i * 6 + 2] = b + 2;
+            idx[i * 6 + 3] = b + 2;
+            idx[i * 6 + 4] = b + 3;
+            idx[i * 6 + 5] = b + 0;
+        }
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER,
+            static_cast<GLsizeiptr>(idx.size() * sizeof(std::uint32_t)),
+            idx.data(), GL_STATIC_DRAW);
+    }
 
     glBindVertexArray(0);
 
     m_vertices.reserve(m_maxQuads * 4);
-    m_indices.reserve(m_maxQuads * 6);
-
     m_initialized = true;
     return true;
 }
@@ -65,13 +80,15 @@ void SpriteBatch::shutdown() {
         m_ibo = 0;
     }
     m_shader.destroy();
+    m_vertices.clear();
+    m_begun = false;
+    m_currentTexture = 0;
     m_initialized = false;
 }
 
 void SpriteBatch::begin(const glm::mat4& viewProj) {
     m_viewProj = viewProj;
     m_vertices.clear();
-    m_indices.clear();
     m_currentTexture = 0;
     m_begun = true;
 }
@@ -100,7 +117,7 @@ void SpriteBatch::drawUV(const Texture& tex, const glm::vec2& pos,
         m_currentTexture = tex.id();
     }
 
-    if (m_vertices.size() + 4 > m_maxQuads * 4) {
+    if (m_vertices.size() + 4 > m_maxQuads * 6) {
         flush();
         m_currentTexture = tex.id();
     }
@@ -111,7 +128,6 @@ void SpriteBatch::drawUV(const Texture& tex, const glm::vec2& pos,
 void SpriteBatch::flush() {
     if (m_vertices.empty() || m_currentTexture == 0) {
         m_vertices.clear();
-        m_indices.clear();
         return;
     }
 
@@ -128,20 +144,14 @@ void SpriteBatch::flush() {
                  static_cast<GLsizeiptr>(m_vertices.size() * sizeof(Vertex2D)),
                  m_vertices.data(), GL_DYNAMIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(m_indices.size() * sizeof(std::uint32_t)),
-        m_indices.data(), GL_DYNAMIC_DRAW);
-
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(m_indices.size()),
+    const std::size_t quadCount = m_vertices.size() / 4;
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(quadCount * 6),
                    GL_UNSIGNED_INT, nullptr);
 
     glBindVertexArray(0);
     m_shader.unbind();
 
     m_vertices.clear();
-    m_indices.clear();
 }
 
 void SpriteBatch::pushQuad(const Texture&, const glm::vec2& pos,
@@ -166,19 +176,10 @@ void SpriteBatch::pushQuad(const Texture&, const glm::vec2& pos,
     const float u1 = uvRect.z;
     const float v1 = uvRect.w;
 
-    const auto base = static_cast<std::uint32_t>(m_vertices.size());
-
     m_vertices.push_back({p0, {u0, v0}, color});
     m_vertices.push_back({p1, {u1, v0}, color});
     m_vertices.push_back({p2, {u1, v1}, color});
     m_vertices.push_back({p3, {u0, v1}, color});
-
-    m_indices.push_back(base + 0);
-    m_indices.push_back(base + 1);
-    m_indices.push_back(base + 2);
-    m_indices.push_back(base + 2);
-    m_indices.push_back(base + 3);
-    m_indices.push_back(base + 0);
 }
 
 }  // namespace game::render

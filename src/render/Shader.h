@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <string>
+#include <unordered_map>
 
 namespace game::render {
 
@@ -35,6 +36,9 @@ public:
     }
 
 private:
+    int uniformLocation(const std::string& name) const;
+
     std::uint32_t m_program = 0;
+    mutable std::unordered_map<std::string, int> m_uniformCache;
 };
 }  // namespace game::render

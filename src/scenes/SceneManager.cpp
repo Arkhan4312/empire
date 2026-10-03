@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "scenes/AppContext.h"
+#include "ui/UIContext.h"
 
 namespace game {
 SceneManager::~SceneManager() = default;
@@ -12,6 +13,11 @@ void SceneManager::replace(ScenePtr scene, AppContext& ctx) {
         m_current->onExit(ctx);
     }
     m_current = std::move(scene);
+
+    ctx.ui.hovered = nullptr;
+    ctx.ui.active = nullptr;
+    ctx.ui.focused = nullptr;
+
     if (m_current) {
         m_current->onEnter(ctx);
     }
@@ -34,5 +40,8 @@ void SceneManager::clear(AppContext& ctx) {
         m_current->onExit(ctx);
         m_current.reset();
     }
+    ctx.ui.hovered = nullptr;
+    ctx.ui.active = nullptr;
+    ctx.ui.focused = nullptr;
 }
 }  // namespace game

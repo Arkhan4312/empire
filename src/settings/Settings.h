@@ -7,6 +7,7 @@ namespace game {
 struct KeyBind {
     std::string action;
     int key = 0;
+    int defaultKey = 0;
 };
 
 struct Settings {
@@ -17,7 +18,7 @@ struct Settings {
     int resolutionIndex = 0;
     int qualityIndex = 2;
     // Audio
-    float masterVoume = 0.80f;
+    float masterVolume = 0.80f;
     float sfxVolume = 1.00f;
     float musicVolume = 0.60f;
     // Controls

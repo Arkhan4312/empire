@@ -10,6 +10,7 @@ bool InputSystem::attach(GLFWwindow* window) {
     if (!window) {
         return false;
     }
+    detach();
     m_window = window;
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, &InputSystem::keyCallback);
@@ -55,7 +56,7 @@ void InputSystem::keyCallback(GLFWwindow* w, int key, int /*scancode*/,
 void InputSystem::mouseButtonCallback(GLFWwindow* w, int button, int action,
                                       int mods) {
     auto* self = static_cast<InputSystem*>(glfwGetWindowUserPointer(w));
-    if (!self || button < 0 || button >= 3) {
+    if (!self || button < 0 || button >= InputState::kMaxMouseButton) {
         return;
     }
 

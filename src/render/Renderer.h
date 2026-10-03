@@ -15,7 +15,9 @@ public:
 
     void beginFrame();
     void endFrame();
-
+    glm::vec2 screenSize() const noexcept {
+        return m_screenSize;
+    }
     void drawRect(const glm::vec2& pos, const glm::vec2& size,
                   const glm::vec4& color);
 
@@ -39,5 +41,6 @@ private:
     SpriteBatch m_batch;
     Texture m_white;
     glm::vec4 m_clearColor{0.06f, 0.07f, 0.10f, 1.0f};
+    glm::vec2 m_screenSize{0.0f};
 };
 }  // namespace game::render

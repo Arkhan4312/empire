@@ -4,7 +4,6 @@
 
 namespace game::render {
 
-// stb_image will be added soon. stub version
 class Texture {
 public:
     Texture() = default;

@@ -15,6 +15,7 @@ public:
 private:
     void buildUi(AppContext& ctx);
 
+    ui::ScrollView m_viewport;
     ui::Container m_root;
 
     // Graphics

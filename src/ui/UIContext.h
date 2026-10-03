@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 
 #include "core/Input.h"
-
+#include "render/Renderer.h"
 namespace game::render {
 class Renderer;
 class Font;
@@ -52,6 +52,19 @@ struct UIContext {
     }
     bool mouseReleased(int b = mouse::Left) const {
         return input && input->isMouseReleased(b);
+    }
+
+    void setFocus(Widget* w) noexcept {
+        focused = w;
+    }
+    void clearFocus(Widget* w) noexcept {
+        if (focused == w) {
+            focused = nullptr;
+        }
+    }
+
+    glm::vec2 screenSize() const {
+        return renderer ? renderer->screenSize() : glm::vec2(0.0f);
     }
 };
 

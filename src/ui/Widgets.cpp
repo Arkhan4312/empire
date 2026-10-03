@@ -1,6 +1,10 @@
 #include "ui/Widgets.h"
 
+#include <glad/glad.h>
+
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
 
 #include "core/Input.h"
 #include "render/Font.h"
@@ -26,6 +30,11 @@ static int countLines(const std::string& s) {
         }
     }
     return lines;
+}
+
+static float fontLineAdvance(const render::Font& f) noexcept {
+    const float natural = f.ascent() - f.descent();
+    return f.lineHeight() > natural ? f.lineHeight() : natural;
 }
 
 //-----------------------------Layouts---------------------------------
@@ -267,10 +276,11 @@ void Container::update(UIContext& ctx) {
     if (!visible) {
         return;
     }
-    for (auto& child : children) {
-        child->update(ctx);
+    for (auto it = children.rbegin(); it != children.rend(); ++it) {
+        (*it)->update(ctx);
     }
 }
+
 void Container::render(UIContext& ctx) {
     if (!visible) {
         return;
@@ -318,7 +328,7 @@ glm::vec2 Label::measure(UIContext& ctx, const glm::vec2& available) {
     }
     widest = std::max(widest, lineW);
     const float h =
-        ctx.font->lineHeight() * static_cast<float>(countLines(text));
+        fontLineAdvance(*ctx.font) * static_cast<float>(countLines(text));
     return {widest * scale, h * scale};
 }
 
@@ -355,7 +365,7 @@ void Label::render(UIContext& ctx) {
 }
 
 //------------------------------Image----------------------------------
-glm::vec2 Image::measure(UIContext& /*ctx*/, const glm::vec2& available) {
+glm::vec2 Image::measure(UIContext& /*ctx*/, const glm::vec2& /*available*/) {
     if (preferredSize.x > 0.0f || preferredSize.y > 0.0f) {
         return preferredSize;
     }
@@ -363,7 +373,7 @@ glm::vec2 Image::measure(UIContext& /*ctx*/, const glm::vec2& available) {
         return {static_cast<float>(texture->width()),
                 static_cast<float>(texture->height())};
     }
-    return available;
+    return {0.0f, 0.0f};
 }
 
 void Image::render(UIContext& ctx) {
@@ -378,7 +388,7 @@ glm::vec2 Button::measure(UIContext& ctx, const glm::vec2& /*available*/) {
     glm::vec2 content{0.0f, 0.0f};
     if (ctx.font && !text.empty()) {
         content.x = ctx.font->measureText(text) * scale;
-        content.y = ctx.font->lineHeight() * scale;
+        content.y = fontLineAdvance(*ctx.font) * scale;
     }
     glm::vec2 s{content.x + ctx.theme.padding * 2.0f,
                 content.y + ctx.theme.padding * 1.5f};
@@ -391,18 +401,29 @@ void Button::update(UIContext& ctx) {
     if (!visible || !enabled) {
         return;
     }
+
     const bool hovered = hitTest(ctx.mousePos());
-    if (hovered) {
+    if (hovered && !ctx.hovered) {
         ctx.hovered = this;
     }
+
     if (hovered && ctx.mousePressed()) {
         ctx.active = this;
+        ctx.setFocus(this);
     }
+
     if (ctx.active == this && ctx.mouseReleased()) {
         if (hovered && OnClick) {
             OnClick();
         }
         ctx.active = nullptr;
+    }
+
+    if (ctx.focused == this && enabled && ctx.active != this && ctx.input) {
+        const bool activate = ctx.input->isKeyPressed(keys::Enter);
+        if (activate && OnClick) {
+            OnClick();
+        }
     }
 }
 
@@ -429,7 +450,7 @@ void Button::render(UIContext& ctx) {
 
     if (ctx.font && !text.empty()) {
         const float w = ctx.font->measureText(text) * scale;
-        const float h = ctx.font->lineHeight() * scale;
+        const float h = fontLineAdvance(*ctx.font) * scale;
         const glm::vec2 tp{m_pos.x + (m_size.x - w) * 0.5f,
                            m_pos.y + (m_size.y - h) * 0.5f};
         const glm::vec4 tc = useThemeText ? (enabled ? ctx.theme.textColor
@@ -446,7 +467,7 @@ void Divider::render(UIContext& ctx) {
 }
 //-----------------------------Checkbox--------------------------------
 glm::vec2 Checkbox::measure(UIContext& ctx, const glm::vec2& /*available*/) {
-    const float box = ctx.font ? ctx.font->lineHeight() * scale : 20.0f;
+    const float box = ctx.font ? fontLineAdvance(*ctx.font) * scale : 20.0f;
     const float textW = (ctx.font && !text.empty())
                             ? ctx.font->measureText(text) * scale
                             : 0.0f;
@@ -457,18 +478,28 @@ void Checkbox::update(UIContext& ctx) {
     if (!visible || !enabled) {
         return;
     }
+
     const bool hovered = hitTest(ctx.mousePos());
-    if (hovered) {
+    if (hovered && !ctx.hovered) {
         ctx.hovered = this;
     }
+
     if (hovered && ctx.mousePressed()) {
         ctx.active = this;
+        ctx.setFocus(this);
     }
+
     if (ctx.active == this && ctx.mouseReleased()) {
         if (hovered && value) {
             *value = !*value;
         }
         ctx.active = nullptr;
+    }
+
+    if (ctx.focused == this && ctx.active != this && ctx.input && value) {
+        if (ctx.input->isKeyPressed(keys::Enter)) {
+            *value = !*value;
+        }
     }
 }
 
@@ -476,33 +507,33 @@ void Checkbox::render(UIContext& ctx) {
     if (!visible || !ctx.renderer) {
         return;
     }
-    const float box = ctx.font ? ctx.font->lineHeight() * scale : 20.0f;
+    const float box = ctx.font ? fontLineAdvance(*ctx.font) * scale : 20.0f;
     const float by = m_pos.y + (m_size.y - box) * 0.5f;
 
     glm::vec4 bg = ctx.theme.buttonBg;
     if (!enabled) {
         bg = ctx.theme.buttonDisabled;
-    } else if (ctx.hovered == this) {
-        bg = ctx.theme.buttonHover;
     } else if (ctx.active == this) {
         bg = ctx.theme.buttonPressed;
+    } else if (ctx.hovered == this) {
+        bg = ctx.theme.buttonHover;
+    }
 
-        ctx.renderer->drawRect({m_pos.x, by}, {box, box}, bg);
+    ctx.renderer->drawRect({m_pos.x, by}, {box, box}, bg);
 
-        if (value && *value) {
-            const float inset = box * 0.28f;
-            ctx.renderer->drawRect({m_pos.x + inset, by + inset},
-                                   {box - inset * 2.0f, box - inset * 2.0f},
-                                   ctx.theme.textColor);
-        }
-        if (ctx.font && !text.empty()) {
-            const float tx = m_pos.x + box + ctx.theme.spacing;
-            const float th = ctx.font->lineHeight() * scale;
-            const float ty = m_pos.y + (m_size.y - th) * 0.5f;
-            ctx.renderer->drawText(
-                *ctx.font, text, {tx, ty},
-                enabled ? ctx.theme.textColor : ctx.theme.textDisabled, scale);
-        }
+    if (value && *value) {
+        const float inset = box * 0.28f;
+        ctx.renderer->drawRect({m_pos.x + inset, by + inset},
+                               {box - inset * 2.0f, box - inset * 2.0f},
+                               ctx.theme.textColor);
+    }
+    if (ctx.font && !text.empty()) {
+        const float tx = m_pos.x + box + ctx.theme.spacing;
+        const float th = fontLineAdvance(*ctx.font) * scale;
+        const float ty = m_pos.y + (m_size.y - th) * 0.5f;
+        ctx.renderer->drawText(
+            *ctx.font, text, {tx, ty},
+            enabled ? ctx.theme.textColor : ctx.theme.textDisabled, scale);
     }
 }
 //----------------------------Choice row-------------------------------
@@ -541,23 +572,42 @@ void ChoiceRow::arrange(UIContext& ctx, const glm::vec2& pos,
 }
 
 void ChoiceRow::update(UIContext& ctx) {
+    m_hoveredSegment = -1;
     if (!visible || !enabled || !value) {
         return;
     }
     const glm::vec2 mp = ctx.mousePos();
-    int hitIdx = -1;
     for (int i = 0; i < static_cast<int>(m_segments.size()); ++i) {
         const glm::vec4& r = m_segments[i];
         if (mp.x >= r.x && mp.x < r.x + r.z && mp.y >= r.y &&
             mp.y < r.y + r.w) {
-            hitIdx = i;
+            m_hoveredSegment = i;
             break;
         }
     }
-    if (hitIdx >= 0) {
-        ctx.hovered = this;
+    if (m_hoveredSegment >= 0) {
+        if (!ctx.hovered) {
+            ctx.hovered = this;
+        }
         if (ctx.mousePressed()) {
-            *value = hitIdx;
+            *value = m_hoveredSegment;
+            ctx.setFocus(this);
+        }
+    }
+
+    if (ctx.focused == this && ctx.input &&
+        ctx.input->isKeyPressed(keys::Escape)) {
+        ctx.clearFocus(this);
+    }
+    if (ctx.focused == this && ctx.input) {
+        const int n = static_cast<int>(options.size());
+        if (n > 0 && value) {
+            if (ctx.input->isKeyPressed(keys::Left) && *value > 0) {
+                --*value;
+            }
+            if (ctx.input->isKeyPressed(keys::Right) && *value < n - 1) {
+                ++*value;
+            }
         }
     }
 }
@@ -585,7 +635,7 @@ void ChoiceRow::render(UIContext& ctx) {
             bg = ctx.theme.buttonDisabled;
         } else if (i == activeIdx) {
             bg = ctx.theme.buttonPressed;
-        } else if (ctx.hovered == this) {
+        } else if (i == m_hoveredSegment) {
             bg = ctx.theme.buttonHover;
         }
 
@@ -594,7 +644,7 @@ void ChoiceRow::render(UIContext& ctx) {
         if (ctx.font && i < static_cast<int>(options.size())) {
             const std::string& opt = options[i];
             const float tw = ctx.font->measureText(opt) * scale;
-            const float th = ctx.font->lineHeight() * scale;
+            const float th = fontLineAdvance(*ctx.font) * scale;
             ctx.renderer->drawText(
                 *ctx.font, opt,
                 {r.x + (r.z - tw) * 0.5f, r.y + (r.w - th) * 0.5f},
@@ -604,7 +654,7 @@ void ChoiceRow::render(UIContext& ctx) {
 }
 //------------------------------Slider---------------------------------
 glm::vec2 Slider::measure(UIContext& ctx, const glm::vec2& /*available*/) {
-    const float lh = ctx.font ? ctx.font->lineHeight() * scale : 20.0f;
+    const float lh = ctx.font ? fontLineAdvance(*ctx.font) * scale : 20.0f;
     const float w = labelWidth + ctx.theme.spacing + 160.0f +
                     ctx.theme.spacing + valueWidth;
     return {w, lh + 8.0f};
@@ -630,9 +680,12 @@ void Slider::update(UIContext& ctx) {
                          mp.y >= m_pos.y && mp.y < m_pos.y + m_size.y;
 
     if (overRow) {
-        ctx.hovered = this;
+        if (!ctx.hovered) {
+            ctx.hovered = this;
+        }
         if (ctx.mousePressed()) {
             ctx.active = this;
+            ctx.setFocus(this);
         }
     }
 
@@ -656,12 +709,22 @@ void Slider::update(UIContext& ctx) {
         }
         *value = v;
     }
+
+    if (ctx.focused == this && ctx.active != this && ctx.input) {
+        const float s = step > 0.0f ? step : (maxValue - minValue) * 0.01f;
+        if (ctx.input->isKeyPressed(keys::Left)) {
+            *value = std::max(minValue, *value - s);
+        }
+        if (ctx.input->isKeyPressed(keys::Right)) {
+            *value = std::min(maxValue, *value + s);
+        }
+    }
 }
 void Slider::render(UIContext& ctx) {
     if (!visible || !ctx.renderer) {
         return;
     }
-    const float lh = ctx.font ? ctx.font->lineHeight() * scale : 20.0f;
+    const float lh = ctx.font ? fontLineAdvance(*ctx.font) * scale : 20.0f;
     const float cy = m_pos.y + m_size.y * 0.5f;
 
     const float trackX = m_pos.x + labelWidth + ctx.theme.spacing;
@@ -708,7 +771,7 @@ void Slider::render(UIContext& ctx) {
     if (ctx.font && value) {
         char buf[32];
         std::snprintf(buf, sizeof(buf), "%d%%",
-                      static_cast<int>(std::round(*value * 100.0f)));
+                      static_cast<int>(std::round(t * 100.0f)));
         const float vx = m_pos.x + m_size.x - valueWidth + 4.0f;
         const float vy = m_pos.y + (m_size.y - lh) * 0.5f;
         ctx.renderer->drawText(*ctx.font, buf, {vx, vy}, ctx.theme.textColor,
@@ -718,8 +781,65 @@ void Slider::render(UIContext& ctx) {
 //--------------------------Key bind button----------------------------
 glm::vec2 KeyBindButton::measure(UIContext& ctx,
                                  const glm::vec2& /*available*/) {
-    const float lh = ctx.font ? ctx.font->lineHeight() * scale : 20.0f;
+    const float lh = ctx.font ? fontLineAdvance(*ctx.font) * scale : 20.0f;
     return {labelWidth + ctx.theme.spacing + badgeWidth, lh + 8.0f};
+}
+
+void KeyBindButton::update(UIContext& ctx) {
+    if (!visible || !enabled) {
+        m_waitingForKey = false;
+        return;
+    }
+
+    const bool hovered = hitTest(ctx.mousePos());
+    if (hovered && !ctx.hovered) {
+        ctx.hovered = this;
+    }
+
+    if (hovered && ctx.mousePressed(mouse::Left)) {
+        ctx.active = this;
+        ctx.setFocus(this);
+        m_waitingForKey = true;
+        return;
+    }
+    if (hovered && ctx.mousePressed(mouse::Right)) {
+        resetToDefault();
+        m_waitingForKey = false;
+        ctx.clearFocus(this);
+        return;
+    }
+    if (ctx.active == this && ctx.mouseReleased(mouse::Left)) {
+        ctx.active = nullptr;
+    }
+
+    if (m_waitingForKey && ctx.focused != this) {
+        m_waitingForKey = false;
+        return;
+    }
+
+    if (ctx.focused != this) {
+        m_waitingForKey = false;
+        return;
+    }
+
+    if (!m_waitingForKey || !ctx.input) {
+        return;
+    }
+
+    if (ctx.input->isKeyPressed(keys::Escape)) {
+        m_waitingForKey = false;
+        ctx.clearFocus(this);
+        return;
+    }
+
+    for (int k = 0; k < game::InputState::kMaxKeys; ++k) {
+        if (ctx.input->isKeyPressed(k)) {
+            setKey(k);
+            m_waitingForKey = false;
+            ctx.clearFocus(this);
+            break;
+        }
+    }
 }
 
 void KeyBindButton::render(UIContext& ctx) {
@@ -727,7 +847,12 @@ void KeyBindButton::render(UIContext& ctx) {
         return;
     }
 
-    const float lh = ctx.font ? ctx.font->lineHeight() * scale : 20.0f;
+    const float lh = ctx.font ? fontLineAdvance(*ctx.font) * scale : 20.0f;
+    const bool focused = (ctx.focused == this);
+
+    if (focused && !m_waitingForKey) {
+        ctx.renderer->drawRect(m_pos, m_size, {0.22f, 0.28f, 0.38f, 0.55f});
+    }
 
     if (ctx.font && !action.empty()) {
         const float ly = m_pos.y + (m_size.y - lh) * 0.5f;
@@ -739,16 +864,200 @@ void KeyBindButton::render(UIContext& ctx) {
     const float by = m_pos.y + 2.0f;
     const float bh = m_size.y - 4.0f;
 
-    ctx.renderer->drawRect({bx, by}, {badgeWidth, bh}, ctx.theme.buttonBg);
+    glm::vec4 badge = ctx.theme.buttonBg;
+    if (!enabled) {
+        badge = ctx.theme.buttonDisabled;
+    } else if (m_waitingForKey) {
+        badge = ctx.theme.buttonPressed;
+    } else if (focused || ctx.hovered == this) {
+        badge = ctx.theme.buttonHover;
+    }
+    ctx.renderer->drawRect({bx, by}, {badgeWidth, bh}, badge);
 
     if (ctx.font) {
-        const std::string name = keyName(key);
+        const std::string name = m_waitingForKey ? "<press key>" : keyName(key);
         const float tw = ctx.font->measureText(name) * scale;
-        const float th = ctx.font->lineHeight() * scale;
+        const float th = fontLineAdvance(*ctx.font) * scale;
         ctx.renderer->drawText(
             *ctx.font, name,
             {bx + (badgeWidth - tw) * 0.5f, by + (bh - th) * 0.5f},
-            ctx.theme.textColor, scale);
+            enabled ? ctx.theme.textColor : ctx.theme.textDisabled, scale);
     }
+}
+// -----------------------------Scroll view----------------------------
+static constexpr float kUnbounded = 1.0e6f;
+glm::vec2 ScrollView::measure(UIContext& ctx, const glm::vec2& available) {
+    if (!child) {
+        return {0.0f, 0.0f};
+    }
+    const glm::vec2 content = child->measure(ctx, {available.x, kUnbounded});
+    const float h = std::min(content.y, available.y);
+    return {available.x, h};
+}
+
+void ScrollView::arrange(UIContext& ctx, const glm::vec2& pos,
+                         const glm::vec2& size) {
+    m_pos = pos;
+    m_size = size;
+
+    if (!child) {
+        m_contentHeight = 0.0f;
+        m_maxScroll = 0.0f;
+        return;
+    }
+
+    const glm::vec2 content = child->measure(ctx, {size.x, kUnbounded});
+    m_contentHeight = content.y;
+    m_maxScroll = std::max(0.0f, m_contentHeight - size.y);
+    clampScroll();
+
+    layoutChild(ctx);
+}
+
+void ScrollView::update(UIContext& ctx) {
+    if (!visible) {
+        return;
+    }
+
+    const glm::vec2 mp = ctx.mousePos();
+    const bool hovered = hitTest(mp);
+    if (hovered && !ctx.hovered) {
+        ctx.hovered = this;
+    }
+
+    if (hovered && ctx.input && m_maxScroll > 0.0f) {
+        const float dy = ctx.input->scrollDelta.y;
+        if (dy != 0.0f) {
+            const float before = m_scroll;
+            m_scroll -= dy * scrollSpeed;
+            clampScroll();
+            if (m_scroll != before) {
+                layoutChild(ctx);
+            }
+        }
+    }
+
+    if (drawScrollbar && m_maxScroll > 0.0f && m_thumbH > 0.0f) {
+        const float trackX =
+            m_pos.x + m_size.x - scrollbarMargin - scrollbarWidth;
+        const float trackY = m_pos.y + scrollbarMargin;
+        const float trackH = m_size.y - scrollbarMargin * 2.0f;
+
+        if (ctx.mousePressed(mouse::Left) && hovered && mp.x >= trackX &&
+            mp.x < trackX + scrollbarWidth && mp.y >= trackY &&
+            mp.y < trackY + trackH) {
+            if (mp.y >= m_thumbY && mp.y < m_thumbY + m_thumbH) {
+                m_draggingThumb = true;
+                m_dragAnchorY = mp.y - m_thumbY;
+            } else {
+                const float t = (mp.y - trackY - m_thumbH * 0.5f) /
+                                std::max(1.0f, trackH - m_thumbH);
+                m_scroll = t * m_maxScroll;
+                clampScroll();
+                layoutChild(ctx);
+            }
+            ctx.active = this;
+        }
+
+        if (m_draggingThumb && ctx.mouseDown(mouse::Left)) {
+            const float thumbTop = mp.y - m_dragAnchorY;
+            const float span = std::max(1.0f, trackH - m_thumbH);
+            const float t = (thumbTop - trackY) / span;
+            m_scroll = t * m_maxScroll;
+            clampScroll();
+            layoutChild(ctx);
+        }
+
+        if (ctx.mouseReleased(mouse::Left)) {
+            m_draggingThumb = false;
+        }
+    }
+    if (child) {
+        child->update(ctx);
+    }
+}
+
+void ScrollView::render(UIContext& ctx) {
+    if (!visible) {
+        return;
+    }
+    if (!ctx.renderer) {
+        if (child) {
+            child->render(ctx);
+            return;
+        }
+    }
+
+    auto& batch = ctx.renderer->batch();
+
+    if (drawBackground) {
+        ctx.renderer->drawRect(m_pos, m_size, background);
+        if (borderWidth > 0.0f) {
+            const float bw = borderWidth;
+            ctx.renderer->drawRect({m_pos.x, m_pos.y}, {m_size.x, bw},
+                                   borderColor);
+            ctx.renderer->drawRect({m_pos.x, m_pos.y + m_size.y - bw},
+                                   {m_size.x, bw}, borderColor);
+            ctx.renderer->drawRect({m_pos.x, m_pos.y}, {bw, m_size.y},
+                                   borderColor);
+            ctx.renderer->drawRect({m_pos.x + m_size.x - bw, m_pos.y},
+                                   {bw, m_size.y}, borderColor);
+        }
+    }
+
+    const glm::vec2 screen = ctx.screenSize();
+    const int fbH = static_cast<int>(screen.y);
+    const int sx = static_cast<int>(m_pos.x);
+    const int sy = fbH - static_cast<int>(m_pos.y + m_size.y);
+    const int sw = static_cast<int>(m_size.x);
+    const int sh = static_cast<int>(m_size.y);
+
+    batch.flush();
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(sx, sy, sw, sh);
+
+    if (child) {
+        child->render(ctx);
+    }
+
+    batch.flush();
+    glDisable(GL_SCISSOR_TEST);
+
+    if (drawScrollbar && m_maxScroll > 0.0f && m_size.y > 0.0f &&
+        m_contentHeight > 0.0f) {
+        const float trackX =
+            m_pos.x + m_size.x - scrollbarMargin - scrollbarWidth;
+        const float trackY = m_pos.y + scrollbarMargin;
+        const float trackH = m_size.y - scrollbarMargin * 2.0f;
+
+        m_thumbH = std::max(24.0f, trackH * (m_size.y / m_contentHeight));
+        const float t = (m_maxScroll > 0.0f) ? (m_scroll / m_maxScroll) : 0.0f;
+        m_thumbY = trackY + (trackH - m_thumbH) * t;
+
+        ctx.renderer->drawRect({trackX, trackY}, {scrollbarWidth, trackH},
+                               scrollbarTrackColor);
+        ctx.renderer->drawRect({trackX, m_thumbY}, {scrollbarWidth, m_thumbH},
+                               scrollbarThumbColor);
+    } else {
+        m_thumbY = 0.0f;
+        m_thumbH = 0.0f;
+    }
+}
+
+void ScrollView::clampScroll() noexcept {
+    if (m_scroll < 0.0f) {
+        m_scroll = 0.0f;
+    }
+    if (m_scroll > m_maxScroll) {
+        m_scroll = m_maxScroll;
+    }
+}
+
+void ScrollView::layoutChild(UIContext& ctx) {
+    if (!child) {
+        return;
+    }
+    child->arrange(ctx, {m_pos.x, m_pos.y - m_scroll},
+                   {m_size.x, m_contentHeight});
 }
 }  // namespace game::ui

@@ -90,6 +90,7 @@ bool Shader::loadFromSource(const std::string& vertSrc,
         return false;
     }
     m_program = prog;
+    m_uniformCache.clear();
     return true;
 }
 
@@ -106,28 +107,36 @@ void Shader::destroy() {
         glDeleteProgram(m_program);
         m_program = 0;
     }
+    m_uniformCache.clear();
 }
 
 void Shader::setInt(const std::string& name, int value) const {
-    glUniform1i(glGetUniformLocation(m_program, name.c_str()), value);
+    glUniform1i(uniformLocation(name), value);
 }
 
 void Shader::setFloat(const std::string& name, float value) const {
-    glUniform1f(glGetUniformLocation(m_program, name.c_str()), value);
+    glUniform1f(uniformLocation(name), value);
 }
 
 void Shader::setVec2(const std::string& name, const glm::vec2& vec) const {
-    glUniform2fv(glGetUniformLocation(m_program, name.c_str()), 1,
-                 glm::value_ptr(vec));
+    glUniform2fv(uniformLocation(name), 1, glm::value_ptr(vec));
 }
 
 void Shader::setVec4(const std::string& name, const glm::vec4& vec) const {
-    glUniform4fv(glGetUniformLocation(m_program, name.c_str()), 1,
-                 glm::value_ptr(vec));
+    glUniform4fv(uniformLocation(name), 1, glm::value_ptr(vec));
 }
 
 void Shader::setMat4(const std::string& name, const glm::mat4& mat) const {
-    glUniformMatrix4fv(glGetUniformLocation(m_program, name.c_str()), 1,
-                       GL_FALSE, glm::value_ptr(mat));
+    glUniformMatrix4fv(uniformLocation(name), 1, GL_FALSE, glm::value_ptr(mat));
 }
+int Shader::uniformLocation(const std::string& name) const {
+    auto it = m_uniformCache.find(name);
+    if (it != m_uniformCache.end()) {
+        return it->second;
+    }
+    const int loc = glGetUniformLocation(m_program, name.c_str());
+    m_uniformCache.emplace(name, loc);
+    return loc;
+}
+
 }  // namespace game::render

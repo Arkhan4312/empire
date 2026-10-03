@@ -52,6 +52,7 @@ void Renderer::beginFrame() {
     }
 
     glViewport(0, 0, w, h);
+    m_screenSize = {static_cast<float>(w), static_cast<float>(h)};
     glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b,
                  m_clearColor.a);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -82,10 +83,12 @@ void Renderer::drawText(const Font& font, std::string_view text,
         return;
     }
     const Texture& atlas = font.atlas();
-    const float lineH = font.lineHeight() * scale;
+    const float natural = font.ascent() - font.descent();
+    const float lineH =
+        (font.lineHeight() > natural ? font.lineHeight() : natural) * scale;
 
     float penX = pos.x;
-    float penY = pos.y + font.ascent()  * scale;
+    float penY = pos.y + font.ascent() * scale;
 
     for (char ch : text) {
         if (ch == '\n') {

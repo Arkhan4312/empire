@@ -10,11 +10,11 @@
 #include "scenes/AppContext.h"
 #include "scenes/MainMenuScene.h"
 #include "scenes/SceneManager.h"
+#include "settings/KeyBindings.h"
 #include "settings/Settings.h"
 #include "ui/UIContext.h"
-
 namespace game {
-
+namespace {
 static ui::Label* addSectionHeader(ui::Container& root, const char* text) {
     auto* l = root.add<ui::Label>(text);
     l->scale = 1.05f;
@@ -22,13 +22,20 @@ static ui::Label* addSectionHeader(ui::Container& root, const char* text) {
     l->color = {0.55f, 0.75f, 1.0f, 1.0f};
     return l;
 }
-
+}  // namespace
 void SettingsScene::onEnter(AppContext& ctx) {
     buildUi(ctx);
 }
 
 void SettingsScene::update(AppContext& ctx, double /*dt*/) {
-    if (ctx.input.state().isKeyPressed(keys::Escape)) {
+    bool keyBindWaiting = false;
+    for (auto* kb : m_keybinds) {
+        if (kb == ctx.ui.focused && kb->waitingForKey()) {
+            keyBindWaiting = true;
+            break;
+        }
+    }
+    if (!keyBindWaiting && ctx.input.state().isKeyPressed(keys::Escape)) {
         ctx.scenes.requestReplace(std::make_unique<MainMenuScene>());
         return;
     }
@@ -39,29 +46,37 @@ void SettingsScene::update(AppContext& ctx, double /*dt*/) {
     const float panelW = 560.0f;
     const float margin = 16.0f;
 
-    const glm::vec2 avail{ panelW, static_cast<float>(h) - margin * 2.0f };
-    const glm::vec2 measured = m_root.measure(ctx.ui, avail);
+    const glm::vec2 avail{panelW, static_cast<float>(h) - margin * 2.0f};
+    const glm::vec2 measured = m_viewport.measure(ctx.ui, avail);
 
     const float panelH = std::min(measured.y, avail.y);
-    const float y = (measured.y <= avail.y) ? (static_cast<float>(h) - panelH) * 0.5f : margin;
+    const float y = (measured.y <= avail.y)
+                        ? (static_cast<float>(h) - panelH) * 0.5f
+                        : margin;
     const float x = (static_cast<float>(w) - panelW) * 0.5f;
 
-    m_root.arrange(ctx.ui, { x,margin }, { panelW, panelH });
-    m_root.update(ctx.ui);
+    m_viewport.arrange(ctx.ui, {x, y}, {panelW, measured.y});
+    m_viewport.update(ctx.ui);
 }
 
 void SettingsScene::render(AppContext& ctx) {
-    m_root.render(ctx.ui);
+    m_viewport.render(ctx.ui);
 }
 
 void SettingsScene::buildUi(AppContext& ctx) {
     Settings& s = ctx.settings;
 
+    m_viewport.child = &m_root;
+    m_viewport.drawBackground = true;
+    m_viewport.background = ctx.ui.theme.panelBg;
+    m_viewport.borderColor = ctx.ui.theme.panelBorder;
+    m_viewport.borderWidth = 1.0f;
+    m_viewport.scrollSpeed = 48.0f;
+
+
     m_root.clear();
     m_root.padding = 24.0f;
     m_root.drawBackground = true;
-    m_root.background = ctx.ui.theme.panelBg;
-    m_root.borderColor = ctx.ui.theme.panelBorder;
     m_root.borderWidth = 1.0f;
     m_root.layout = std::make_unique<ui::BoxLayout>(
         ui::MainAxis::Vertical, ui::CrossAlign::Stretch, 6.0f);
@@ -104,7 +119,7 @@ void SettingsScene::buildUi(AppContext& ctx) {
 
     m_master = m_root.add<ui::Slider>();
     m_master->label = "Master";
-    m_master->value = &s.masterVoume;
+    m_master->value = &s.masterVolume;
 
     m_sfx = m_root.add<ui::Slider>();
     m_sfx->label = "SFX";
@@ -121,8 +136,17 @@ void SettingsScene::buildUi(AppContext& ctx) {
 
     m_keybinds.clear();
     m_keybinds.reserve(s.keys.size());
-    for (const auto& kb : s.keys) {
-        auto* row = m_root.add<ui::KeyBindButton>(kb.action, kb.key);
+    for (auto& kb : s.keys) {
+        auto* row =
+            m_root.add<ui::KeyBindButton>(kb.action, kb.key, kb.defaultKey);
+        row->onKeyChanged = [&s, action = kb.action](int newKey) {
+            for (auto& e : s.keys) {
+                if (e.action == action) {
+                    e.key = newKey;
+                    break;
+                }
+            }
+        };
         m_keybinds.push_back(row);
     }
 

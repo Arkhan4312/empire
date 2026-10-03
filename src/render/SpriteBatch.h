@@ -39,9 +39,9 @@ public:
                 const glm::vec4& uvRect,
                 const glm::vec4& color = glm::vec4(1.0f),
                 float rotationRad = 0.0f);
+    void flush();
 
 private:
-    void flush();
     void pushQuad(const Texture& tex, const glm::vec2& pos,
                   const glm::vec2& size, const glm::vec4& uvRect,
                   const glm::vec4& color, float rotationRad);
@@ -52,7 +52,6 @@ private:
     std::uint32_t m_ibo = 0;
 
     std::vector<Vertex2D> m_vertices;
-    std::vector<std::uint32_t> m_indices;
 
     glm::mat4 m_viewProj{1.0f};
     std::uint32_t m_currentTexture = 0;
