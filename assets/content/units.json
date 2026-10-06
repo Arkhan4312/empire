@@ -14,6 +14,7 @@
     {
       "id": "tank_matchbox",
       "name": "Танк из спичечного коробка",
+      "unlockedByDefault": false,
       "cost": { "plastic": 25 },
       "stats": {
         "damage": 3,

@@ -9,6 +9,7 @@ inline constexpr int A = 65;
 inline constexpr int D = 68;
 inline constexpr int E = 69;
 inline constexpr int S = 83;
+inline constexpr int U = 85;
 inline constexpr int W = 87;
 inline constexpr int Escape = 256;
 inline constexpr int Enter = 257;

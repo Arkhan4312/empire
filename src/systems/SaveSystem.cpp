@@ -62,6 +62,50 @@ void sanitize(GameState& s) {
         }
         s.units = std::move(keep);
     }
+    // Buildings
+    {
+        std::vector<UnitStack> keep;
+        keep.reserve(s.buildings.size());
+        std::unordered_set<std::string> seen;
+        for (auto& b : s.buildings) {
+            if (b.count <= 0) {
+                continue;
+            }
+            if (!C.findBuilding(b.id)) {
+                continue;
+            }
+            if (!seen.insert(b.id).second) {
+                continue;
+            }
+            keep.push_back(std::move(b));
+        }
+        s.buildings = std::move(keep);
+    }
+    // Unlocked
+    {
+        for (const auto& u : C.allUnits()) {
+            if (u.unlockedByDefault) {
+                s.unlock(u.id);
+            }
+        }
+        for (const auto& u : C.allUpgrades()) {
+            if (u.unlockedByDefault) {
+                s.unlock(u.id);
+            }
+        }
+        for (const auto& b : C.allBuildings()) {
+            if (b.unlockedByDefault) {
+                s.unlock(b.id);
+            }
+        }
+        std::unordered_set<std::string> cleaned;
+        for (const auto& id : s.unlocked) {
+            if (C.findUnit(id) || C.findUpgrade(id) || C.findBuilding(id)) {
+                cleaned.insert(id);
+            }
+        }
+        s.unlocked = std::move(cleaned);
+    }
     // Upgrades
     {
         std::vector<UpgradeState> keep;
@@ -228,6 +272,20 @@ bool SaveSystem::save(GameState& state, const std::string& path) const {
     }
     j["units"] = std::move(units);
 
+    json builds = json::array();
+    for (const auto& b : state.buildings) {
+        if (b.count <= 0) {
+            continue;
+        }
+        builds.push_back({{"id", b.id}, {"count", b.count}});
+    }
+    j["buildings"] = std::move(builds);
+
+    j["unlocked"] = json::array();
+    for (const auto& id : state.unlocked) {
+        j["unlocked"].push_back(id);
+    }
+
     json ups = json::array();
     for (const auto& u : state.upgrades) {
         if (u.level <= 0) {
@@ -332,6 +390,26 @@ bool SaveSystem::load(GameState& state, const std::string& path) const {
                     continue;
                 }
                 loaded.units.push_back(UnitStack{id, count});
+            }
+        }
+        if (j.contains("buildings") && j["buildings"].is_array()) {
+            for (const auto& b : j["buildings"]) {
+                if (!b.is_object()) {
+                    continue;
+                }
+                const std::string id = readString(b, "id");
+                const int count = readInt(b, "count", 0);
+                if (id.empty() || count <= 0) {
+                    continue;
+                }
+                loaded.buildings.push_back(UnitStack{id, count});
+            }
+        }
+        if (j.contains("unlocked") && j["unlocked"].is_array()) {
+            for (const auto& id : j["unlocked"]) {
+                if (id.is_string()) {
+                    loaded.unlocked.insert(id.get<std::string>());
+                }
             }
         }
         if (j.contains("upgrades") && j["upgrades"].is_array()) {

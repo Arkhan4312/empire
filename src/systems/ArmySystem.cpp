@@ -16,6 +16,9 @@ bool ArmySystem::craft(GameState& state, const std::string& unitId, int count) {
     if (count <= 0) {
         return false;
     }
+    if (!state.isUnlocked(unitId)) {
+        return false;
+    }
     const UnitDef* def = content::findUnit(unitId);
     if (!def) {
         return false;
@@ -58,14 +61,14 @@ double ArmySystem::computeArmyDps(const GameState& state) const {
 }
 
 void ArmySystem::damageBoss(GameState& state, double dps, double dt) {
-    const auto& content = content::Content::instance();
+    const auto& C = content::Content::instance();
     double remaining = dps * dt;
     if (remaining <= 0.0) {
         return;
     }
     // loop
     while (remaining > 0.0) {
-        if (state.bossIndex >= content.bossCount(state.era)) {
+        if (state.bossIndex >= C.bossCount(state.era)) {
             state.currentBoss.hp = 0.0;
             return;
         }
@@ -75,9 +78,33 @@ void ArmySystem::damageBoss(GameState& state, double dps, double dt) {
         }
 
         const double overflow = -state.currentBoss.hp;
+        const BossDef* killed = C.bossAt(state.era, state.bossIndex);
+        if (killed) {
+            for (const auto& r : killed->reward) {
+                if (r.id != kInvalidResource) {
+                    state.resources.add(r.id, r.amount);
+                }
+            }
+            for (const auto& id : killed->unlocks) {
+                state.unlock(id);
+
+                std::string display = id;
+                if (const auto* u = C.findUnit(id)) {
+                    display = u->name;
+                } else if (const auto* up = C.findUpgrade(id)) {
+                    display = up->name;
+                } else if (const auto* b = C.findBuilding(id)) {
+                    display = b->name;
+                }
+                state.events.push_back({GameEventKind::Unlock, id, display});
+            }
+            state.events.push_back(
+                {GameEventKind::BossKilled, killed->id, killed->name});
+        }
+
         ++state.bossIndex;
 
-        const BossDef* next = content.bossAt(state.era, state.bossIndex);
+        const BossDef* next = C.bossAt(state.era, state.bossIndex);
         if (!next) {
             state.currentBoss.hp = 0.0;
             return;

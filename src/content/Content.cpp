@@ -284,6 +284,7 @@ bool game::content::Content::loadFromDirectory(const std::string& dir,
                     return fail("units.json[" + d.id + "]: invalid stats");
                 }
             }
+            d.unlockedByDefault = u.value("unlockedByDefault", true);
             newUnits.push_back(std::move(d));
         }
     }
@@ -351,10 +352,56 @@ bool game::content::Content::loadFromDirectory(const std::string& dir,
                     d.effects.push_back({effectRegistry().at(name), val});
                 }
             }
+
+            d.unlockedByDefault = u.value("unlockedByDefault", true);
             newUpgrades.push_back(std::move(d));
         }
     }
+    std::vector<BuildingDef> newBuildings;
+    {
+        json j;
+        if (!loadJsonFile(dir + "/buildings.json", j, err)) {
+            return fail(err);
+        }
+        if (!j.contains("buildings") || !j["buildings"].is_array()) {
+            return fail("buildings.json: missing 'buildings' array");
+        }
+        std::unordered_set<std::string> seen;
+        for (const auto& b : j["buildings"]) {
+            if (!b.is_object()) {
+                return fail("buildings.json: building is not an object");
+            }
+            BuildingDef d;
+            d.id = b.value("id", "");
+            d.name = b.value("name", d.id);
+            if (d.id.empty()) {
+                return fail("buildings.json: building without id");
+            }
+            if (!seen.insert(d.id).second) {
+                return fail("buildings.json: duplicate id '" + d.id + "'");
+            }
+            d.unlockedByDefault = b.value("unlockedByDefault", true);
+            d.costMultiplier = b.value("costMultiplier", 1.15);
+            if (d.costMultiplier < 1.0) {
+                return fail("buildings.json[" + d.id +
+                            "]: costMultiplier must be >= 1.0");
+            }
+            if (b.contains("cost")) {
+                std::string cerr;
+                if (!parseCosts(b["cost"], resIdx, d.costs, cerr)) {
+                    return fail("buildings.json[" + d.id + "]: " + cerr);
+                }
+            }
+            if (b.contains("production")) {
+                std::string cerr;
+                if (!parseCosts(b["production"], resIdx, d.production, cerr)) {
+                    return fail("buildings.json[" + d.id + "]: " + cerr);
+                }
+            }
 
+            newBuildings.push_back(std::move(d));
+        }
+    }
     // bosses
     std::vector<BossDef> newBosses;
     {
@@ -393,12 +440,26 @@ bool game::content::Content::loadFromDirectory(const std::string& dir,
             if (d.maxHp <= 0.0) {
                 return fail("bosses.json[" + d.id + "]: maxHp <= 0");
             }
+            if (b.contains("reward")) {
+                std::string cerr;
+                if (!parseCosts(b["reward"], resIdx, d.reward, cerr)) {
+                    return fail("bosses.json[" + d.id + "]: " + cerr);
+                }
+            }
+            if (b.contains("unlocks") && b["unlocks"].is_array()) {
+                for (const auto& u : b["unlocks"]) {
+                    if (u.is_string()) {
+                        d.unlocks.push_back(u.get<std::string>());
+                    }
+                }
+            }
             newBosses.push_back(std::move(d));
         }
     }
     m_resources = std::move(newResources);
     m_units = std::move(newUnits);
     m_upgrades = std::move(newUpgrades);
+    m_buildings = std::move(newBuildings);
     m_bosses = std::move(newBosses);
 
     m_balance = std::move(newBalance);
@@ -425,6 +486,12 @@ const UnitDef* game::content::Content::findUnit(std::string_view id) const {
     auto it = m_unitIdx.find(std::string(id));
     return it == m_unitIdx.end() ? nullptr : &m_units[it->second];
 }
+
+const BuildingDef* Content::findBuilding(std::string_view id) const {
+    auto it = m_buildingIdx.find(std::string(id));
+    return it == m_buildingIdx.end() ? nullptr : &m_buildings[it->second];
+}
+
 const UpgradeDef* game::content::Content::findUpgrade(
     std::string_view id) const {
     auto it = m_upgradeIdx.find(std::string(id));
@@ -496,6 +563,11 @@ void game::content::Content::installFallback() {
         u.speed = 3.0;
         m_units.push_back(std::move(u));
     }
+    m_buildings = {
+        {"paper_mill", "Бумажная мельница", {{0, 50.0}}, {{1, 1.0}}, true},
+        {"glue_pot", "Тарелка с клеем", {{0, 100.0}}, {{2, 0.5}}, false},
+    };
+
     {
         UpgradeDef up;
         up.id = "up_plastic_1";
@@ -519,9 +591,27 @@ void game::content::Content::installFallback() {
         m_upgrades.push_back(std::move(up));
     }
     m_bosses = {
-        {"boss_kolya", "Колька из 3-го подъезда", Era::CHILDHOOD, 50, 2},
-        {"boss_serega", "Старшеклассник Серёга", Era::CHILDHOOD, 150, 5},
-        {"boss_vitka", "Местный задира Витька", Era::CHILDHOOD, 500, 15},
+        {"boss_kolya",
+         "Колька из 3-го подъезда",
+         Era::CHILDHOOD,
+         50,
+         2,
+         {{0, 30.0}},
+         {"paper_mill"}},
+        {"boss_serega",
+         "Старшеклассник Серёга",
+         Era::CHILDHOOD,
+         150,
+         5,
+         {{0, 80.0}, {1, 20.0}},
+         {"tank_matchbox"}},
+        {"boss_vitka",
+         "Местный задира Витька",
+         Era::CHILDHOOD,
+         500,
+         15,
+         {{0, 200.0}, {1, 50.0}},
+         {"glue_pot"}},
     };
     m_balance = Balance::defaults();
     m_balance.childhoodBossCount = 3;
@@ -532,6 +622,7 @@ void game::content::Content::installFallback() {
 void game::content::Content::rebuildIndices() {
     m_unitIdx.clear();
     m_upgradeIdx.clear();
+    m_buildingIdx.clear();
     m_bossIdx.clear();
     m_resourceIdx.clear();
     for (std::size_t i = 0; i < m_resources.size(); ++i) {
@@ -542,6 +633,9 @@ void game::content::Content::rebuildIndices() {
     }
     for (std::size_t i = 0; i < m_upgrades.size(); ++i) {
         m_upgradeIdx[m_upgrades[i].id] = i;
+    }
+    for (std::size_t i = 0; i < m_buildings.size(); ++i) {
+        m_buildingIdx[m_buildings[i].id] = i;
     }
     for (std::size_t i = 0; i < m_bosses.size(); ++i) {
         m_bossIdx[m_bosses[i].id] = i;
@@ -561,7 +655,21 @@ void initNewGame(GameState& state) {
     state.bossIndex = 0;
     state.clickPower = Content::instance().balance().clickBasePower;
     state.resources.reset(content.allResources().size());
-
+    for (const auto& u : Content::instance().allUnits()) {
+        if (u.unlockedByDefault) {
+            state.unlock(u.id);
+        }
+    }
+    for (const auto& u : Content::instance().allUpgrades()) {
+        if (u.unlockedByDefault) {
+            state.unlock(u.id);
+        }
+    }
+    for (const auto& u : Content::instance().allBuildings()) {
+        if (u.unlockedByDefault) {
+            state.unlock(u.id);
+        }
+    }
     if (const BossDef* b = Content::instance().bossAt(state.era, 0)) {
         state.currentBoss = Boss{b->id, b->name, b->maxHp, b->maxHp, b->dps};
     }

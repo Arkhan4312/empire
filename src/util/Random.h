@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <random>
 
 namespace game {
 
@@ -14,6 +15,12 @@ public:
         z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
         z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
         return z ^ (z >> 31);
+    }
+
+    static float frand(float lo, float hi) {
+        static std::mt19937 rng{std::random_device{}()};
+        static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+        return lo + dist(rng) * (hi - lo);
     }
 
     double nextDouble() noexcept {

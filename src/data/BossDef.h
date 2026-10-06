@@ -1,5 +1,9 @@
 #pragma once
 #include <string>
+#include <vector>
+
+#include "data/Era.h"
+#include "data/ResourceDef.h"
 
 namespace game {
 // Boss definition. It's actually an enemy/combat unit, but currently only
@@ -13,5 +17,8 @@ struct BossDef {
     Era era = Era::CHILDHOOD;
     double maxHp = 100.0;
     double dps = 1.0;
+
+    std::vector<ResourceAmount> reward;
+    std::vector<std::string> unlocks;
 };
 }  // namespace game

@@ -8,6 +8,9 @@ bool UpgradeSystem::buy(GameState& state, const std::string& upgradeId) {
     if (!def) {
         return false;
     }
+    if (!state.isUnlocked(upgradeId)) {
+        return false;
+    }
     UpgradeState* cur = state.findUpgrade(upgradeId);
     const int currentLevel = cur ? cur->level : 0;
     if (currentLevel >= def->maxLevel) {

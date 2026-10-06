@@ -49,6 +49,14 @@ if(EMPIRE_BUILD_APP)
 	)
 	FetchContent_MakeAvailable(stb)
 	
+	FetchContent_Declare(miniaudio
+	URL https://github.com/mackron/miniaudio/archive/refs/heads/master.zip
+	)
+	FetchContent_MakeAvailable(miniaudio)
+
+	add_library(miniaudio_headers INTERFACE)
+	target_include_directories(miniaudio_headers INTERFACE ${miniaudio_SOURCE_DIR})
+
 	add_library(stb_headers INTERFACE)
 	target_include_directories(stb_headers INTERFACE ${stb_SOURCE_DIR})
 
@@ -72,6 +80,7 @@ add_library(empire_core STATIC
 	src/systems/UpgradeSystem.cpp
 	src/systems/EraSystem.cpp
 	src/systems/SaveSystem.cpp
+	src/systems/EconomySystem.cpp
 )
 
 target_include_directories(empire_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -95,6 +104,8 @@ if(EMPIRE_BUILD_APP)
 	src/render/SpriteBatch.cpp
 	src/render/Font.cpp
 	src/render/Renderer.cpp
+	src/audio/miniaudio_impl.cpp
+	src/audio/AudioSystem.cpp
 
 	src/ui/Widgets.cpp
 	src/ui/UIContext.cpp
@@ -110,6 +121,7 @@ if(EMPIRE_BUILD_APP)
 	glad_gl_core_43
 	glm::glm
 	stb_headers
+	miniaudio_headers
 	)
 
 	target_compile_definitions(empire PRIVATE 

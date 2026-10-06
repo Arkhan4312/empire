@@ -1,4 +1,6 @@
 #pragma once
+#include <data/BuildingDef.h>
+
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -54,6 +56,7 @@ public:
 
     // lookups
     const UnitDef* findUnit(std::string_view id) const;
+    const BuildingDef* findBuilding(std::string_view id) const;
     const UpgradeDef* findUpgrade(std::string_view id) const;
     const BossDef* findBoss(std::string_view id) const;
     const ResourceDef* resource(ResourceId id) const;
@@ -64,6 +67,9 @@ public:
 
     const std::vector<UnitDef>& allUnits() const noexcept {
         return m_units;
+    }
+    const std::vector<BuildingDef>& allBuildings() const noexcept {
+        return m_buildings;
     }
     const std::vector<UpgradeDef>& allUpgrades() const noexcept {
         return m_upgrades;
@@ -84,12 +90,14 @@ private:
     void installFallback();
 
     std::vector<UnitDef> m_units;
+    std::vector<BuildingDef> m_buildings;
     std::vector<UpgradeDef> m_upgrades;
     std::vector<BossDef> m_bosses;
     std::vector<ResourceDef> m_resources;
     Balance m_balance;
 
     std::unordered_map<std::string, std::size_t> m_unitIdx;
+    std::unordered_map<std::string, std::size_t> m_buildingIdx;
     std::unordered_map<std::string, std::size_t> m_upgradeIdx;
     std::unordered_map<std::string, std::size_t> m_bossIdx;
     std::unordered_map<std::string, ResourceId> m_resourceIdx;

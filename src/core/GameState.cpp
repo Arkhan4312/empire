@@ -1,6 +1,8 @@
-#include "core/GameState.h"
+#include "GameState.h"
 
 #include <algorithm>
+
+#include "core/GameState.h"
 
 namespace game {
 
@@ -29,6 +31,16 @@ UnitStack* GameState::findUnit(const std::string& id) noexcept {
     }
     return nullptr;
 }
+
+UnitStack* GameState::findBuilding(const std::string& id) noexcept {
+    for (auto& b : buildings) {
+        if (b.id == id) {
+            return &b;
+        }
+    }
+    return nullptr;
+}
+
 UpgradeState* GameState::findUpgrade(const std::string& id) noexcept {
     for (auto& u : upgrades) {
         if (u.id == id) {

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "buildings": [
+    {
+      "id": "paper_mill",
+      "name": "Бумажная мельница",
+      "unlockedByDefault": false,
+      "cost": { "plastic": 50 },
+      "costMultiplier": 1.15,
+      "production": { "paper": 1.0 }
+    },
+    {
+      "id": "glue_pot",
+      "name": "Клеевой котёл",
+      "unlockedByDefault": false,
+      "cost": { "plastic": 100 },
+      "costMultiplier": 1.20,
+      "production": { "glue": 0.5 }
+    },
+    {
+      "id": "plastic_recycler",
+      "name": "Пластиковый рециклер",
+      "unlockedByDefault": true,
+      "cost": { "plastic": 200 },
+      "costMultiplier": 1.18,
+      "production": { "plastic": 2.0 }
+    }
+  ]
+}

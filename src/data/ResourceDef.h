@@ -8,6 +8,11 @@ namespace game {
 using ResourceId = std::uint16_t;
 inline constexpr ResourceId kInvalidResource = 0xFFFFu;
 
+struct ResourceAmount {
+    ResourceId id = kInvalidResource;
+    double amount = 0.0;
+};
+
 struct ResourceDef {
     std::string id;
     std::string name;

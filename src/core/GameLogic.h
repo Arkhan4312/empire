@@ -2,6 +2,7 @@
 #include "core/GameState.h"
 #include "core/Tick.h"
 #include "systems/ArmySystem.h"
+#include "systems/EconomySystem.h"
 #include "systems/EraSystem.h"
 #include "systems/ProductionSystem.h"
 #include "systems/UpgradeSystem.h"
@@ -22,10 +23,18 @@ public:
     bool buyUpgrade(GameState& state, const std::string& upgradeId);
     bool advanceEra(GameState& state);
 
+    bool build(GameState& state, const std::string& builingId, int count = 1);
+    double clickPower(const GameState& state) const {
+        return m_production.computeClickPower(state);
+    }
+
+    bool buyCheapestUpgrade(GameState& state);
+
 private:
     ProductionSystem m_production;
     ArmySystem m_army;
     UpgradeSystem m_upgrade;
     EraSystem m_era;
+    EconomySystem m_economy;
 };
 }  // namespace game

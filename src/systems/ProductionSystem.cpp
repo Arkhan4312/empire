@@ -3,13 +3,6 @@
 #include "content/Content.h"
 
 namespace game {
-void ProductionSystem::tick(GameState& state, double dt) {
-    // Passive income: most valued in later eras, mvp =0;
-    const std::size_t n = state.resources.size();
-    for (std::size_t i = 0; i < n; ++i) {
-        state.resources.addByIdx(i, state.resources.rateAt(i) * dt);
-    }
-}
 
 double ProductionSystem::click(GameState& state) const {
     const double gain = computeClickPower(state);

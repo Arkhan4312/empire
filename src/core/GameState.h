@@ -2,17 +2,16 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
+#include "data/Era.h"
 #include "data/ResourceDef.h"
 
 namespace game {
 // class for controlling and changing the most important aspects of game (such
 // as era, current stats, etc)
-enum class Era : std::uint8_t {
-    CHILDHOOD = 1,
-    ENTREPRENEUR = 2,
-};
+
 class ResourcePool {
 public:
     void reset(std::size_t n) {
@@ -109,13 +108,28 @@ struct Boss {
     double dps = 1.0;
 };
 
+enum class GameEventKind : std::uint8_t {
+    Unlock,
+    BossKilled,
+};
+
+struct GameEvent {
+    GameEventKind kind = GameEventKind::Unlock;
+    std::string id;
+    std::string name;
+};
+
 struct GameState {
     std::uint32_t version = 1;
     Era era = Era::CHILDHOOD;
 
     ResourcePool resources;
     std::vector<UnitStack> units;
+    std::vector<UnitStack> buildings;
     std::vector<UpgradeState> upgrades;
+    std::vector<GameEvent> events;
+
+    std::unordered_set<std::string> unlocked;
 
     int bossIndex = 0;
     Boss currentBoss{};
@@ -133,8 +147,25 @@ struct GameState {
     int upgradeLevel(const std::string& id) const noexcept;
 
     UnitStack* findUnit(const std::string& id) noexcept;
+    UnitStack* findBuilding(const std::string& id) noexcept;
     UpgradeState* findUpgrade(const std::string& id) noexcept;
     const UpgradeState* findUpgrade(const std::string& id) const noexcept;
+
+    bool isUnlocked(const std::string& id) const noexcept {
+        return unlocked.count(id) > 0;
+    }
+    void unlock(const std::string& id) {
+        unlocked.insert(id);
+    }
+
+    int buildingCount(const std::string& id) const noexcept {
+        for (const auto& b : buildings) {
+            if (b.id == id) {
+                return b.count;
+            }
+        }
+        return 0;
+    }
 };
 
 }  // namespace game

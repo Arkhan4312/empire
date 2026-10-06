@@ -28,5 +28,6 @@ struct UpgradeDef {
             }
         }
     }
+    bool unlockedByDefault = true;
 };
 }  // namespace game
