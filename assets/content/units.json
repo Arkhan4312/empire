@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "units": [
+    {
+      "id": "soldier_crooked",
+      "name": "Солдатик с кривыми руками",
+      "cost": { "plastic": 5 },
+      "stats": {
+        "damage": 1,
+        "hp": 5,
+        "speed": 1.0
+      }
+    },
+    {
+      "id": "tank_matchbox",
+      "name": "Танк из спичечного коробка",
+      "cost": { "plastic": 25 },
+      "stats": {
+        "damage": 3,
+        "hp": 20,
+        "speed": 0.5
+      }
+    },
+    {
+      "id": "plane_paper",
+      "name": "Бумажный самолётик",
+      "cost": { "paper": 10 },
+      "stats": {
+        "damage": 2,
+        "hp": 3,
+        "speed": 3.0
+      }
+    }
+  ]
+}

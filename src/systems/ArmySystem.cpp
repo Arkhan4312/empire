@@ -21,25 +21,20 @@ bool ArmySystem::craft(GameState& state, const std::string& unitId, int count) {
         return false;
     }
 
-    const double needPlastic = def->costPlastic * count;
-    const double needPaper = def->costPaper * count;
-    const double needGlue = def->costGlue * count;
-
-    if (state.resources.get(ResourceType::PLASTIC) < needPlastic) {
-        return false;
+    for (const auto& c : def->costs) {
+        if (c.id == kInvalidResource) {
+            continue;
+        }
+        if (state.resources.get(c.id) < c.amount * count) {
+            return false;
+        }
     }
-
-    if (state.resources.get(ResourceType::PAPER) < needPaper) {
-        return false;
+    for (const auto& c : def->costs) {
+        if (c.id == kInvalidResource) {
+            continue;
+        }
+        state.resources.spend(c.id, c.amount * count);
     }
-
-    if (state.resources.get(ResourceType::GLUE) < needGlue) {
-        return false;
-    }
-
-    state.resources.spend(ResourceType::PLASTIC, needPlastic);
-    state.resources.spend(ResourceType::PAPER, needPaper);
-    state.resources.spend(ResourceType::GLUE, needGlue);
 
     if (UnitStack* stack = state.findUnit(unitId)) {
         stack->count += count;
@@ -63,20 +58,33 @@ double ArmySystem::computeArmyDps(const GameState& state) const {
 }
 
 void ArmySystem::damageBoss(GameState& state, double dps, double dt) {
-    if (state.bossIndex >= static_cast<int>(content::bossCount())) {
+    const auto& content = content::Content::instance();
+    double remaining = dps * dt;
+    if (remaining <= 0.0) {
         return;
     }
-    state.currentBoss.hp -= dps * dt;
-    if (state.currentBoss.hp > 0.0) {
-        return;
-    }
+    // loop
+    while (remaining > 0.0) {
+        if (state.bossIndex >= content.bossCount(state.era)) {
+            state.currentBoss.hp = 0.0;
+            return;
+        }
+        state.currentBoss.hp -= remaining;
+        if (state.currentBoss.hp > 0.0) {
+            return;
+        }
 
-    ++state.bossIndex;
-    if (const BossDef* next = content::bossAt(state.bossIndex)) {
-        state.currentBoss =
-            Boss{next->id, next->name, next->maxHp, next->maxHp, next->dps};
-    } else {
-        state.currentBoss.hp = 0.0;
+        const double overflow = -state.currentBoss.hp;
+        ++state.bossIndex;
+
+        const BossDef* next = content.bossAt(state.era, state.bossIndex);
+        if (!next) {
+            state.currentBoss.hp = 0.0;
+            return;
+        }
+        state.currentBoss = Boss{next->id, next->name, next->maxHp,
+                                 next->maxHp - overflow, next->dps};
+        remaining = overflow;
     }
 }
 }  // namespace game

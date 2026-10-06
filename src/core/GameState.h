@@ -4,22 +4,91 @@
 #include <string>
 #include <vector>
 
-#include "data/ResourceType.h"
+#include "data/ResourceDef.h"
 
 namespace game {
-// class for controlling and changing the most important aspects of game (such as era, current stats, etc)
+// class for controlling and changing the most important aspects of game (such
+// as era, current stats, etc)
 enum class Era : std::uint8_t {
     CHILDHOOD = 1,
     ENTREPRENEUR = 2,
 };
-struct ResourcePool {
-    std::array<double, kResourceCount> amount{};
-    std::array<double, kResourceCount> rate{};
+class ResourcePool {
+public:
+    void reset(std::size_t n) {
+        m_amount.assign(n, 0.0);
+        m_rate.assign(n, 0.0);
+    }
 
-    double get(ResourceType t) const noexcept;
-    void add(ResourceType t, double v) noexcept;
-    bool canAfford(ResourceType t, double v) const noexcept;
-    bool spend(ResourceType t, double v) noexcept;
+    std::size_t size() const noexcept {
+        return m_amount.size();
+    }
+
+    double get(ResourceId id) const noexcept {
+        return id < m_amount.size() ? m_amount[id] : 0.0;
+    }
+
+    double getByIdx(std::size_t i) const noexcept {
+        return i < m_amount.size() ? m_amount[i] : 0.0;
+    }
+
+    void add(ResourceId id, double v) noexcept {
+        if (id >= m_amount.size()) {
+            return;
+        }
+        m_amount[id] += v;
+        if (m_amount[id] < 0.0) {
+            m_amount[id] = 0.0;
+        }
+    }
+
+    void addByIdx(std::size_t i, double v) noexcept {
+        if (i >= m_amount.size()) {
+            return;
+        }
+        m_amount[i] += v;
+        if (m_amount[i] < 0.0) {
+            m_amount[i] = 0.0;
+        }
+    }
+
+    void setByIdx(std::size_t i, double v) noexcept {
+        if (i < m_amount.size()) {
+            m_amount[i] = v;
+        }
+    }
+
+    bool canAfford(ResourceId id, double v) const noexcept {
+        return get(id) >= v;
+    }
+
+    bool spend(ResourceId id, double v) noexcept {
+        if (id >= m_amount.size() || m_amount[id] < v) {
+            return false;
+        }
+        m_amount[id] -= v;
+        return true;
+    }
+
+    double rateAt(std::size_t i) const noexcept {
+        return i < m_rate.size() ? m_rate[i] : 0.0;
+    }
+
+    void setRate(std::size_t i, double v) noexcept {
+        if (i < m_rate.size()) {
+            m_rate[i] = v;
+        }
+    }
+
+    void addRate(std::size_t i, double v) noexcept {
+        if (i < m_rate.size()) {
+            m_rate[i] += v;
+        }
+    }
+
+private:
+    std::vector<double> m_amount;
+    std::vector<double> m_rate;
 };
 
 struct UnitStack {

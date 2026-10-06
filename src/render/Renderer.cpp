@@ -89,22 +89,21 @@ void Renderer::drawText(const Font& font, std::string_view text,
 
     float penX = pos.x;
     float penY = pos.y + font.ascent() * scale;
-
-    for (char ch : text) {
-        if (ch == '\n') {
+    std::size_t i = 0;
+    while (i < text.size()) {
+        const std::uint32_t cp = utf8Decode(text, i);
+        if (cp == '\n') {
             penX = pos.x;
-            penY += lineH;
+            penY = lineH;
             continue;
         }
-        if (ch == '\r') {
+        if (cp == '\r') {
             continue;
         }
-
-        const Glyph* g = font.glyph(ch);
+        const Glyph* g = font.glyph(cp);
         if (!g) {
             continue;
         }
-
         if (g->width > 0 && g->height > 0) {
             const glm::vec2 gpos = {penX + g->xoff * scale,
                                     penY + g->yoff * scale};

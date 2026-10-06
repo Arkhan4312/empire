@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "click": {
+    "basePower": 1.0
+  },
+  "autosave": {
+    "intervalSeconds": 60
+  },
+  "offline": {
+    "minSeconds": 60,
+    "maxSeconds": 604800,
+    "subTickMaxSeconds": 1.0,
+    "segments": [
+      {
+        "seconds": 3600,
+        "speed": 1.00
+      },
+      {
+        "seconds": 18000,
+        "speed": 0.75
+      },
+      {
+        "seconds": 64800,
+        "speed": 0.50
+      },
+      {
+        "seconds": 518400,
+        "speed": 0.25
+      }
+    ]
+  },
+  "era": {
+    "childhoodBossCount": 3
+  }
+}

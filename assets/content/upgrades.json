@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "upgrades": [
+    {
+      "id": "up_plastic_1",
+      "name": "Новый набор пластилина",
+      "cost": { "plastic": 100 },
+      "maxLevel": 5,
+      "effects": [
+        {
+          "name": "quality_mult_mul",
+          "value": 1.25
+        }
+      ]
+    },
+    {
+      "id": "up_tools_1",
+      "name": "Папины инструменты",
+      "cost": { "plastic": 500 },
+      "maxLevel": 3,
+      "effects": [
+        {
+          "name": "quality_mult_mul",
+          "value": 1.10
+        }
+      ]
+    }
+  ]
+}

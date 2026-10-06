@@ -7,7 +7,7 @@
 #include "systems/UpgradeSystem.h"
 
 namespace game {
-    // Actual gameplay core. Main actions, buying/clicking/upgrading/
+// Actual gameplay core. Main actions, buying/clicking/upgrading/
 class GameLogic {
 public:
     GameLogic();
@@ -16,6 +16,9 @@ public:
 
     bool clickMain(GameState& state);
     bool craftUnit(GameState& state, const std::string& unitId, int count = 1);
+    double armyDps(const GameState& s) const {
+        return m_army.computeArmyDps(s);
+    }
     bool buyUpgrade(GameState& state, const std::string& upgradeId);
     bool advanceEra(GameState& state);
 

@@ -14,21 +14,20 @@ bool UpgradeSystem::buy(GameState& state, const std::string& upgradeId) {
         return false;
     }
 
-    if (state.resources.get(ResourceType::PLASTIC) < def->costPlastic) {
-        return false;
+    for (const auto& c : def->costs) {
+        if (c.id == kInvalidResource) {
+            continue;
+        }
+        if (state.resources.get(c.id) < c.amount) {
+            return false;
+        }
     }
-
-    if (state.resources.get(ResourceType::PAPER) < def->costPaper) {
-        return false;
+    for (const auto& c : def->costs) {
+        if (c.id == kInvalidResource) {
+            continue;
+        }
+        state.resources.spend(c.id, c.amount);
     }
-
-    if (state.resources.get(ResourceType::GLUE) < def->costGlue) {
-        return false;
-    }
-
-    state.resources.spend(ResourceType::PLASTIC, def->costPlastic);
-    state.resources.spend(ResourceType::PAPER, def->costPaper);
-    state.resources.spend(ResourceType::GLUE, def->costGlue);
 
     if (cur) {
         cur->level += 1;
@@ -36,9 +35,7 @@ bool UpgradeSystem::buy(GameState& state, const std::string& upgradeId) {
         state.upgrades.push_back(UpgradeState{upgradeId, 1});
     }
 
-    if (def->apply) {
-        def->apply(state);
-    }
+    def->apply(state);
     return true;
 }
 }  // namespace game

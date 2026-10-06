@@ -1,18 +1,25 @@
 #include "systems/ProductionSystem.h"
 
+#include "content/Content.h"
+
 namespace game {
 void ProductionSystem::tick(GameState& state, double dt) {
     // Passive income: most valued in later eras, mvp =0;
-
-    for (std::size_t i = 0; i < kResourceCount; ++i) {
-        state.resources.amount[i] += state.resources.rate[i] * dt;
+    const std::size_t n = state.resources.size();
+    for (std::size_t i = 0; i < n; ++i) {
+        state.resources.addByIdx(i, state.resources.rateAt(i) * dt);
     }
-    (void)state;
 }
 
 double ProductionSystem::click(GameState& state) const {
     const double gain = computeClickPower(state);
-    state.resources.add(ResourceType::PLASTIC, gain);
+    const auto& defs = content::Content::instance().allResources();
+    for (std::size_t i = 0; i < defs.size() && i < state.resources.size();
+         ++i) {
+        if (defs[i].clickYield > 0.0) {
+            state.resources.addByIdx(i, defs[i].clickYield * gain);
+        }
+    }
     return gain;
 }
 

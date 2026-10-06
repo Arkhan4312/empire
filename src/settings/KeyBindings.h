@@ -2,7 +2,7 @@
 #include <cstring>
 #include <string>
 
-#include "Core/Input.h"
+#include "core/Input.h"
 
 namespace game::settings {
 

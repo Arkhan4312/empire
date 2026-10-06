@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include "render/Texture.h"
 
@@ -20,6 +21,7 @@ struct Glyph {
     int yoff = 0;
     float xadvance = 0.0f;
 };
+std::uint32_t utf8Decode(std::string_view s, std::size_t& i) noexcept;
 
 class Font {
 public:
@@ -52,17 +54,13 @@ public:
         return m_lineHeight;
     }
 
-    const Glyph* glyph(char c) const noexcept;
+    const Glyph* glyph(std::uint32_t codepoint) const noexcept;
 
     float measureText(std::string_view text) const noexcept;
 
 private:
-    static constexpr int kFirstChar = 32;
-    static constexpr int kLastChar = 126;
-    static constexpr int kGlyphCount = kLastChar - kFirstChar + 1;
-
     Texture m_atlas;
-    Glyph m_glyphs[kGlyphCount]{};
+    std::unordered_map<std::uint32_t, Glyph> m_glyphs;
     float m_pixelSize = 0.0f;
     float m_ascent = 0.0f;
     float m_descent = 0.0f;

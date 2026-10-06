@@ -37,6 +37,97 @@ static float fontLineAdvance(const render::Font& f) noexcept {
     return f.lineHeight() > natural ? f.lineHeight() : natural;
 }
 
+static float measureLinePx(const render::Font& f, std::string_view s,
+                           float scale) {
+    float w = 0.0f;
+    std::size_t i = 0;
+    while (i < s.size()) {
+        const std::uint32_t cp = render::utf8Decode(s, i);
+        if (const render::Glyph* g = f.glyph(cp)) {
+            w += g->xadvance * scale;
+        }
+    }
+    return w;
+}
+
+static std::vector<std::string> splitByNewLine(std::string_view text) {
+    std::vector<std::string> out;
+    std::string cur;
+    for (char c : text) {
+        if (c == '\n') {
+            out.push_back(std::move(cur));
+            cur.clear();
+        } else if (c != '\r') {
+            cur += c;
+        }
+    }
+    out.push_back(std::move(cur));
+    return out;
+}
+
+static std::vector<std::string> wrapText(const render::Font& font,
+                                         std::string_view text,
+                                         float maxWidthPx, float scale) {
+    std::vector<std::string> result;
+
+    for (auto& para : splitByNewLine(text)) {
+        if (para.empty() || maxWidthPx <= 0.0f) {
+            result.push_back(std::move(para));
+            continue;
+        }
+        std::size_t start = 0;
+        while (start < para.size()) {
+            std::size_t i = start;
+            std::size_t lastSpace = std::string::npos;
+            std::size_t lastFit = std::string::npos;
+            float w = 0.0f;
+
+            while (i < para.size()) {
+                const std::size_t before = i;
+                const std::uint32_t cp = render::utf8Decode(para, i);
+
+                float adv = 0.0f;
+                if (const render::Glyph* g = font.glyph(cp)) {
+                    adv = g->xadvance * scale;
+                }
+                if (w + adv > maxWidthPx && before > start) {
+                    break;
+                }
+                if (cp == ' ') {
+                    lastSpace = before;
+                }
+                w += adv;
+                lastFit = i;
+            }
+
+            std::size_t cut;
+            if (lastFit == std::string::npos) {
+                cut = para.size();
+            } else if (lastFit >= para.size()) {
+                cut = para.size();
+            } else if (lastSpace != std::string::npos && lastSpace > start) {
+                cut = lastSpace;
+            } else {
+                cut = lastFit;
+            }
+
+            if (cut <= start) {
+                cut = start + 1;
+            }
+
+            result.push_back(para.substr(start, cut - start));
+
+            start = cut;
+            while (start < para.size() && para[start] == ' ') {
+                ++start;
+            }
+        }
+    }
+    if (result.empty()) {
+        result.push_back(std::string{});
+    }
+    return result;
+}
 //-----------------------------Layouts---------------------------------
 //-------------------------Overlay layout------------------------------
 glm::vec2 BoxLayout::measure(Container& c, UIContext& ctx,
@@ -309,27 +400,17 @@ glm::vec2 Label::measure(UIContext& ctx, const glm::vec2& available) {
     if (!ctx.font || text.empty()) {
         return {0.0f, 0.0f};
     }
+    const float wrapW = (wrap && available.x > 0.0f) ? available.x : -1.0f;
+    const std::vector<std::string> lines =
+        wrapText(*ctx.font, text, wrapW, scale);
 
     float widest = 0.0f;
-    float lineW = 0.0f;
-    for (char ch : text) {
-        if (ch == '\n') {
-            widest = std::max(widest, lineW);
-            lineW = 0.0f;
-            continue;
-        }
-        if (ch == '\r') {
-            continue;
-        }
-        const render::Glyph* g = ctx.font->glyph(ch);
-        if (g) {
-            lineW += g->xadvance;
-        }
+    for (const auto& ln : lines) {
+        widest = std::max(widest, measureLinePx(*ctx.font, ln, scale));
     }
-    widest = std::max(widest, lineW);
     const float h =
-        fontLineAdvance(*ctx.font) * static_cast<float>(countLines(text));
-    return {widest * scale, h * scale};
+        fontLineAdvance(*ctx.font) * static_cast<float>(lines.size()) * scale;
+    return {widest, h};
 }
 
 void Label::render(UIContext& ctx) {
@@ -337,31 +418,42 @@ void Label::render(UIContext& ctx) {
         return;
     }
     const glm::vec4 c = useThemeColor ? ctx.theme.textColor : color;
-    const glm::vec2 measured = measure(ctx, m_size);
 
-    float x = m_pos.x;
+    const float wrapW = (wrap && m_size.x > 0.0f) ? m_size.x : -1.0f;
+    const std::vector<std::string> lines =
+        wrapText(*ctx.font, text, wrapW, scale);
+
+    const float lineAdv = fontLineAdvance(*ctx.font) * scale;
+    const float totalH = lineAdv * static_cast<float>(lines.size());
+
     float y = m_pos.y;
-    switch (halign) {
-        case HAlign::Left:
-            break;
-        case HAlign::Center:
-            x += (m_size.x - measured.x) * 0.5f;
-            break;
-        case HAlign::Right:
-            x += (m_size.x - measured.x);
-            break;
-    }
     switch (valign) {
         case VAlign::Top:
             break;
         case VAlign::Middle:
-            y += (m_size.y - measured.y) * 0.5f;
+            y += (m_size.y - totalH) * 0.5f;
             break;
         case VAlign::Bottom:
-            y += (m_size.y - measured.y);
+            y += (m_size.y - totalH);
             break;
     }
-    ctx.renderer->drawText(*ctx.font, text, {x, y}, c, scale);
+
+    for (const auto& ln : lines) {
+        const float lineW = measureLinePx(*ctx.font, ln, scale);
+        float x = m_pos.x;
+        switch (halign) {
+            case HAlign::Left:
+                break;
+            case HAlign::Center:
+                x += (m_size.x - lineW) * 0.5f;
+                break;
+            case HAlign::Right:
+                x += (m_size.x - lineW);
+                break;
+        }
+        ctx.renderer->drawText(*ctx.font, ln, {x, y}, c, scale);
+        y += lineAdv;
+    }
 }
 
 //------------------------------Image----------------------------------

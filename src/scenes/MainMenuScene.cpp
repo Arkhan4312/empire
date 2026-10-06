@@ -69,6 +69,7 @@ void MainMenuScene::buildUi(AppContext& ctx) {
     m_newGame = m_root.add<ui::Button>("New game");
     m_newGame->OnClick = [&ctx] {
         content::initNewGame(ctx.state);
+        ctx.state.lastSaveTimestamp = SaveSystem::nowSeconds();
         ctx.scenes.requestReplace(std::make_unique<GameScene>());
     };
 
@@ -88,7 +89,7 @@ void MainMenuScene::buildUi(AppContext& ctx) {
     m_settings = m_root.add<ui::Button>("Settings");
     m_settings->OnClick = [&ctx] {
         ctx.scenes.requestReplace(std::make_unique<SettingsScene>());
-        };
+    };
 
     m_root.add<ui::Spacer>(glm::vec2{0.0f, 4.0f});
 

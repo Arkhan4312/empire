@@ -58,7 +58,11 @@ void GameScene::update(AppContext& ctx, double dt) {
     const float margin = 20.0f;
     {
         const glm::vec2 avail{320.0f, static_cast<float>(h) - margin * 2.0f};
-        const glm::vec2 measured = m_hud.measure(ctx.ui, avail);
+        glm::vec2 measured = m_hud.measure(ctx.ui, avail);
+
+        measured.x = 320.0f;
+        measured.y = std::min(measured.y, avail.y);
+
         m_hud.arrange(ctx.ui, {margin, margin}, measured);
         m_hud.update(ctx.ui);
     }
@@ -127,29 +131,48 @@ void GameScene::buildUi(AppContext& ctx) {
     m_hud.layout = std::make_unique<ui::BoxLayout>(
         ui::MainAxis::Vertical, ui::CrossAlign::Stretch, 6.0f);
 
-    m_plastic = m_hud.add<ui::Label>("plastic: 0");
+    m_resourceLabel = m_hud.add<ui::Label>("...");
+    m_resourceLabel->wrap = true;
     m_boss = m_hud.add<ui::Label>("boss: -");
+    m_boss->wrap = true;
     m_dps = m_hud.add<ui::Label>("army dps: 0");
+    m_dps->wrap = false;
 }
 void GameScene::refreshLabels(AppContext& ctx) {
-    char buf[256];
-    std::snprintf(buf, sizeof(buf), "plastic: %.1f",
-                  ctx.state.resources.get(ResourceType::PLASTIC));
-    m_plastic->text = buf;
+    // --- Ресурсы: одна строка на ресурс ---
+    {
+        const auto& defs = content::Content::instance().allResources();
+        const std::size_t n = std::min(defs.size(), ctx.state.resources.size());
 
-    std::snprintf(buf, sizeof(buf), "boss: %s hp: %.1f / %.1f",
-                  ctx.state.currentBoss.name.c_str(), ctx.state.currentBoss.hp,
-                  ctx.state.currentBoss.maxHp);
-    m_boss->text = buf;
-
-    double dps = 0.0f;
-    for (const auto& s : ctx.state.units) {
-        if (const UnitDef* d = content::findUnit(s.id)) {
-            dps += d->damage * static_cast<double>(s.count) *
-                   ctx.state.qualityMult;
+        std::string s;
+        s.reserve(n * 32u);
+        for (std::size_t i = 0; i < n; ++i) {
+            if (i > 0) {
+                s += '\n';
+            }
+            char tmp[128];
+            std::snprintf(tmp, sizeof(tmp), "%s: %.1f", defs[i].name.c_str(),
+                          ctx.state.resources.getByIdx(i));
+            s += tmp;
         }
+        m_resourceLabel->text = std::move(s);
     }
-    std::snprintf(buf, sizeof(buf), "army dps: %.1f", dps);
-    m_dps->text = buf;
+
+    // --- Босс ---
+    {
+        char buf[256];
+        std::snprintf(buf, sizeof(buf), "boss: %s\nhp: %.1f / %.1f",
+                      ctx.state.currentBoss.name.c_str(),
+                      ctx.state.currentBoss.hp, ctx.state.currentBoss.maxHp);
+        m_boss->text = buf;
+    }
+
+    // --- DPS ---
+    {
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "army dps: %.1f",
+                      ctx.logic.armyDps(ctx.state));
+        m_dps->text = buf;
+    }
 }
 }  // namespace game

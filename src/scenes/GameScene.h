@@ -18,7 +18,7 @@ private:
     void refreshLabels(AppContext& ctx);
 
     ui::Container m_hud;
-    ui::Label* m_plastic = nullptr;
+    ui::Label* m_resourceLabel = nullptr;
     ui::Label* m_boss = nullptr;
     ui::Label* m_dps = nullptr;
 

@@ -33,7 +33,16 @@ int main() {
     GameLogic logic;
     SaveSystem save;
     Settings settings;
+    {
+        std::string err;
+        if (!content::Content::instance().loadFromDirectory(std::string(EMPIRE_ASSETS_DIR) + "/content", &err)) {
+            std::fprintf(stderr, "[Content] load failed: %s\n", err.c_str());
+            std::fprintf(stderr, "[Content] using built-it fallback\n");
+        }
+    }
+
     content::initNewGame(state);
+    state.lastSaveTimestamp = SaveSystem::nowSeconds();
 
     render::Window window;
     if (!window.create(1280, 720, "Empire from Nothing")) {
@@ -51,7 +60,7 @@ int main() {
 
     render::Font font;
     const bool fontOk = font.loadFromFile(
-        std::string(EMPIRE_ASSETS_DIR) + "/fonts/main.ttf", 22.0f);
+        std::string(EMPIRE_ASSETS_DIR) + "/fonts/Cyrillic.ttf", 22.0f);
     if (!fontOk) {
         std::fprintf(stderr, "[Init] font not  loaded, running without text\n");
     }
@@ -83,6 +92,24 @@ int main() {
             dt = 0.25;
         }
 
+#if !defined(NDEBUG)
+        if (input.state().isKeyPressed(301)) {
+            std::string err;
+            if (!content::Content::instance().reload(&err)) {
+                std::fprintf(stderr, "[HotReload] failed %s\n", err.c_str());
+            } else {
+                std::fprintf(stderr, "[HotReload] content reloaded\n");
+            }
+        }
+#endif
+
+        if (SaveSystem::needAutosave(state)) {
+            if (!save.save(state, kSavePath)) {
+                std::fprintf(stderr, "[Autosave] failed to write '%s'\n",
+                             kSavePath);
+            }
+        }
+
         uiCtx.beginFrame();
         if (Scene* s = scenes.current()) {
             s->update(ctx, dt);
@@ -99,7 +126,6 @@ int main() {
         window.swapBuffers();
     }
 
-    state.lastSaveTimestamp = nowSeconds();
     save.save(state, kSavePath);
 
     font.destroy();

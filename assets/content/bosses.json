@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "bosses": [
+    {
+      "id": "boss_kolya",
+      "name": "Колька из 3-го подъезда",
+      "era": "CHILDHOOD",
+      "maxHp": 50,
+      "dps": 2
+    },
+    {
+      "id": "boss_serega",
+      "name": "Старшеклассник Серёга",
+      "era": "CHILDHOOD",
+      "maxHp": 150,
+      "dps": 5
+    },
+    {
+      "id": "boss_vitka",
+      "name": "Местный задира Витька",
+      "era": "CHILDHOOD",
+      "maxHp": 400,
+      "dps": 15
+    },
+    {
+      "id": "boss_rent",
+      "name": "Арендодатель",
+      "era": "ENTREPRENEUR",
+      "maxHp": 1000,
+      "dps": 40
+    }
+  ]
+}

@@ -74,6 +74,8 @@ public:
     bool useThemeColor = true;
     HAlign halign = HAlign::Left;
     VAlign valign = VAlign::Middle;
+    bool wrap = false;
+
 
     Label() = default;
     explicit Label(std::string t) : text(std::move(t)) {
