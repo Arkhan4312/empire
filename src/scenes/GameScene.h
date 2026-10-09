@@ -1,7 +1,7 @@
 #pragma once
+#include "audio/AudioSystem.h"
 #include "scenes/Scene.h"
 #include "ui/Widgets.h"
-
 namespace game {
 
 class GameScene : public Scene {
@@ -40,6 +40,8 @@ private:
     void updateTransient(double dt);
     void renderTransient(AppContext& ctx);
 
+    void playRandomPop(AppContext& ctx);
+    void playEmptyClick(AppContext& ctx);
     ui::Container m_hud;
     ui::Label* m_resourceLabel = nullptr;
     ui::Label* m_boss = nullptr;
@@ -55,5 +57,16 @@ private:
 
     std::vector<FloatingText> m_floaters;
     std::vector<Notification> m_notifications;
+
+    audio::SoundId m_sfxPop1 = audio::kInvalidSound;
+    audio::SoundId m_sfxPop2 = audio::kInvalidSound;
+    audio::SoundId m_sfxPop3 = audio::kInvalidSound;
+    audio::SoundId m_sfxPop4 = audio::kInvalidSound;
+    audio::SoundId m_sfxItemEquip = audio::kInvalidSound;
+    audio::SoundId m_sfxCancel = audio::kInvalidSound;
+    audio::SoundId m_sfxBookClose = audio::kInvalidSound;
+    audio::SoundId m_sfxWhoosh = audio::kInvalidSound;
+    audio::SoundId m_sfxClickOff = audio::kInvalidSound;
+    audio::SoundId m_sfxClickOn = audio::kInvalidSound;
 };
 }  // namespace game

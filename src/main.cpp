@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <memory>
 
+#include "audio/AudioSystem.h"
 #include "content/Content.h"
 #include "core/GameLogic.h"
 #include "core/GameState.h"
@@ -33,9 +34,15 @@ int main() {
     GameLogic logic;
     SaveSystem save;
     Settings settings;
+    audio::AudioSystem audio;
+    if (!audio.init()) {
+        std::fprintf(stderr, "[Init] audio disabled\n");
+    }
+
     {
         std::string err;
-        if (!content::Content::instance().loadFromDirectory(std::string(EMPIRE_ASSETS_DIR) + "/content", &err)) {
+        if (!content::Content::instance().loadFromDirectory(
+                std::string(EMPIRE_ASSETS_DIR) + "/content", &err)) {
             std::fprintf(stderr, "[Content] load failed: %s\n", err.c_str());
             std::fprintf(stderr, "[Content] using built-it fallback\n");
         }
@@ -72,8 +79,17 @@ int main() {
 
     SceneManager scenes;
     AppContext ctx{
-        state,     logic, save,  settings, window,
-        renderer,  input, uiCtx, scenes,   fontOk ? &font : nullptr,
+        state,
+        logic,
+        save,
+        settings,
+        window,
+        renderer,
+        input,
+        uiCtx,
+        scenes,
+        audio,
+        fontOk ? &font : nullptr,
         kSavePath,
     };
 
@@ -116,6 +132,11 @@ int main() {
         }
         scenes.applyPending(ctx);
 
+        audio.setMasterVolume(settings.masterVolume);
+        audio.setSfxVolume(settings.sfxVolume);
+        audio.setMusicVolume(settings.musicVolume);
+        audio.update(static_cast<float>(dt));
+
         renderer.beginFrame();
         if (Scene* s = scenes.current()) {
             s->render(ctx);
@@ -128,6 +149,7 @@ int main() {
 
     save.save(state, kSavePath);
 
+    audio.shutdown();
     font.destroy();
     input.detach();
     renderer.shutdown();

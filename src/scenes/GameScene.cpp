@@ -1,7 +1,9 @@
 #include "scenes/GameScene.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <memory>
+#include <string>
 
 #include "content/Content.h"
 #include "core/GameLogic.h"
@@ -19,6 +21,27 @@
 namespace game {
 
 void GameScene::onEnter(AppContext& ctx) {
+    const std::string base = std::string(EMPIRE_ASSETS_DIR) + "/audio/";
+
+    m_sfxPop1 = ctx.audio.loadSound("pop_1", {base + "sfx/pop_1.wav", 0.85f});
+    m_sfxPop2 = ctx.audio.loadSound("pop_2", {base + "sfx/pop_2.wav", 0.85f});
+    m_sfxPop3 = ctx.audio.loadSound("pop_3", {base + "sfx/pop_3.wav", 0.85f});
+    m_sfxPop4 = ctx.audio.loadSound("pop_4", {base + "sfx/pop_4.wav", 0.85f});
+
+    m_sfxItemEquip =
+        ctx.audio.loadSound("item_equip", {base + "sfx/item_equip.wav", 0.8f});
+    m_sfxCancel =
+        ctx.audio.loadSound("cancel", {base + "sfx/cancel.wav", 0.8f});
+    m_sfxBookClose =
+        ctx.audio.loadSound("book_close", {base + "sfx/book_close.wav", 0.8f});
+    m_sfxWhoosh =
+        ctx.audio.loadSound("whoosh_1", {base + "sfx/whoosh_1.wav", 0.9f});
+    m_sfxClickOff = ctx.audio.loadSound("click_double_off",
+                                        {base + "sfx/click_double_off.wav"});
+    m_sfxClickOn = ctx.audio.loadSound("click_double_on",
+                                       {base + "sfx/click_double_on.wav"});
+
+    ctx.audio.playMusic(base + "music/game_loop(tmp).wav", 0.8f, /*loop*/ true);
     buildUi(ctx);
     refreshLabels(ctx);
 }
@@ -36,39 +59,57 @@ void GameScene::update(AppContext& ctx, double dt) {
     if (in.isKeyPressed(keys::Space)) {
         const double gain = ctx.logic.clickPower(ctx.state);
         ctx.logic.clickMain(ctx.state);
+        playRandomPop(ctx);
 
         char buf[32];
         std::snprintf(buf, sizeof(buf), "+%.1f", gain);
         spawnFloater(ctx, buf, {0.65f, 0.9f, 1.0f, 1.0f});
     }
     if (in.isKeyPressed(keys::E)) {
-        ctx.logic.buyUpgrade(ctx.state, "up_plastic_1");
+        if (ctx.logic.buyUpgrade(ctx.state, "up_plastic_1")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     // units
     if (in.isKeyPressed(49)) {
-        ctx.logic.craftUnit(ctx.state, "soldier_crooked");
+        if (ctx.logic.craftUnit(ctx.state, "soldier_crooked")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     if (in.isKeyPressed(50)) {
-        ctx.logic.craftUnit(ctx.state, "tank_matchbox");
+        if (ctx.logic.craftUnit(ctx.state, "tank_matchbox")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     if (in.isKeyPressed(51)) {
-        ctx.logic.craftUnit(ctx.state, "plane_paper");
+        if (ctx.logic.craftUnit(ctx.state, "plane_paper")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     // buildings
     if (in.isKeyPressed(52)) {
-        ctx.logic.build(ctx.state, "paper_mill");
+        if (ctx.logic.build(ctx.state, "paper_mill")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     if (in.isKeyPressed(53)) {
-        ctx.logic.build(ctx.state, "glue_pot");
+        if (ctx.logic.build(ctx.state, "glue_pot")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     if (in.isKeyPressed(54)) {
-        ctx.logic.build(ctx.state, "plastic_recycler");
+        if (ctx.logic.build(ctx.state, "plastic_recycler")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     // upgrades
     if (in.isKeyPressed(keys::U)) {
-        ctx.logic.buyCheapestUpgrade(ctx.state);
+        if (ctx.logic.buyCheapestUpgrade(ctx.state)) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     }
     if (in.isKeyPressed(keys::Escape)) {
+        ctx.audio.play(m_sfxCancel, 1.0f);
         ctx.scenes.requestReplace(std::make_unique<MainMenuScene>());
         return;
     }
@@ -97,6 +138,9 @@ void GameScene::update(AppContext& ctx, double dt) {
         m_actions.arrange(ctx.ui, pos, measured);
         m_actions.update(ctx.ui);
     }
+    if (in.isMousePressed(mouse::Left) && ctx.ui.hovered == nullptr) {
+        playEmptyClick(ctx);
+    }
 }
 
 void GameScene::render(AppContext& ctx) {
@@ -104,6 +148,7 @@ void GameScene::render(AppContext& ctx) {
     m_actions.render(ctx.ui);
     renderTransient(ctx);
 }
+
 void GameScene::buildUi(AppContext& ctx) {
     m_actions.clear();
     m_actions.padding = 16.0f;
@@ -118,46 +163,68 @@ void GameScene::buildUi(AppContext& ctx) {
     m_click->OnClick = [this, &ctx] {
         const double gain = ctx.logic.clickPower(ctx.state);
         ctx.logic.clickMain(ctx.state);
+        playRandomPop(ctx);
+
         char buf[32];
         std::snprintf(buf, sizeof(buf), "+%.1f", gain);
         spawnFloater(ctx, buf, {0.65f, 0.9f, 1.0f, 1.0f});
     };
 
     m_upgrade = m_actions.add<ui::Button>("Buy upgrade (e)");
-    m_upgrade->OnClick = [&ctx] {
-        ctx.logic.buyUpgrade(ctx.state, "up_plastic_1");
+    m_upgrade->OnClick = [this, &ctx] {
+        if (ctx.logic.buyUpgrade(ctx.state, "up_plastic_1")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     };
 
     m_actions.add<ui::Spacer>(glm::vec2{0.0f, 4.0f});
 
     m_soldier = m_actions.add<ui::Button>("Craft soldier(1)");
-    m_soldier->OnClick = [&ctx] {
-        ctx.logic.craftUnit(ctx.state, "soldier_crooked");
+    m_soldier->OnClick = [this, &ctx] {
+        if (ctx.logic.craftUnit(ctx.state, "soldier_crooked")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     };
 
     m_tank = m_actions.add<ui::Button>("Craft tank (2)");
-    m_tank->OnClick = [&ctx] {
-        ctx.logic.craftUnit(ctx.state, "tank_matchbox");
+    m_tank->OnClick = [this, &ctx] {
+        if (ctx.logic.craftUnit(ctx.state, "tank_matchbox")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     };
 
     m_plane = m_actions.add<ui::Button>("Craft plane (3)");
-    m_plane->OnClick = [&ctx] {
-        ctx.logic.craftUnit(ctx.state, "plane_paper");
+    m_plane->OnClick = [this, &ctx] {
+        if (ctx.logic.craftUnit(ctx.state, "plane_paper")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
     };
 
     m_actions.add<ui::Spacer>(glm::vec2{0.0f, 4.0f});
 
     auto* b1 = m_actions.add<ui::Button>("Build paper mill (4)");
-    b1->OnClick = [&ctx] { ctx.logic.build(ctx.state, "paper_mill"); };
+    b1->OnClick = [this, &ctx] {
+        if (ctx.logic.build(ctx.state, "paper_mill"))
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+    };
     auto* b2 = m_actions.add<ui::Button>("Build glue pot (5)");
-    b2->OnClick = [&ctx] { ctx.logic.build(ctx.state, "glue_pot"); };
+    b2->OnClick = [this, &ctx] {
+        if (ctx.logic.build(ctx.state, "glue_pot")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
+    };
     auto* b3 = m_actions.add<ui::Button>("Build recycler (6)");
-    b3->OnClick = [&ctx] { ctx.logic.build(ctx.state, "plastic_recycler"); };
+    b3->OnClick = [this, &ctx] {
+        if (ctx.logic.build(ctx.state, "plastic_recycler")) {
+            ctx.audio.play(m_sfxItemEquip, 1.0f);
+        }
+    };
 
     m_actions.add<ui::Spacer>(glm::vec2{0.0f, 8.0f});
 
     m_menu = m_actions.add<ui::Button>("Back to menu (Esc)");
-    m_menu->OnClick = [&ctx] {
+    m_menu->OnClick = [this, &ctx] {
+        ctx.audio.play(m_sfxCancel, 1.0f);
         ctx.scenes.requestReplace(std::make_unique<MainMenuScene>());
     };
 
@@ -245,10 +312,12 @@ void GameScene::drainEvents(AppContext& ctx) {
     for (const auto& e : ctx.state.events) {
         switch (e.kind) {
             case GameEventKind::Unlock:
+                ctx.audio.play(m_sfxBookClose, 1.0f);
                 spawnNotification("Открыто: " + e.name,
                                   {0.55f, 0.95f, 0.55f, 1.0f});
                 break;
             case GameEventKind::BossKilled:
+                ctx.audio.play(m_sfxWhoosh, 1.0f);
                 spawnNotification("Победа: " + e.name,
                                   {0.95f, 0.55f, 0.55f, 1.0f});
                 break;
@@ -270,7 +339,7 @@ void GameScene::updateTransient(double dt) {
                        [](const FloatingText& f) { return f.age >= f.life; }),
         m_floaters.end());
     for (auto& n : m_notifications) {
-        n.age + fdt;
+        n.age += fdt;
     }
     m_notifications.erase(
         std::remove_if(m_notifications.begin(), m_notifications.end(),
@@ -322,6 +391,30 @@ void GameScene::renderTransient(AppContext& ctx) {
         r.drawText(*ctx.font, n.text, p, c, scale);
 
         y += 48.0f;
+    }
+}
+void GameScene::playRandomPop(AppContext& ctx) {
+    const int idx = static_cast<int>(Rng::frand(0.0f, 3.999f));
+    switch (idx) {
+        case 0:
+            ctx.audio.play(m_sfxPop1, 1.0f);
+            break;
+        case 1:
+            ctx.audio.play(m_sfxPop2, 1.0f);
+            break;
+        case 2:
+            ctx.audio.play(m_sfxPop3, 1.0f);
+            break;
+        default:
+            ctx.audio.play(m_sfxPop4, 1.0f);
+            break;
+    }
+}
+void GameScene::playEmptyClick(AppContext& ctx) {
+    if (Rng::frand(0.0f, 1.0f) < 0.5f) {
+        ctx.audio.play(m_sfxClickOff, 0.6f);
+    } else {
+        ctx.audio.play(m_sfxClickOn, 0.6f);
     }
 }
 }  // namespace game

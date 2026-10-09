@@ -2,10 +2,12 @@
 
 #include <fstream>
 #include <memory>
+#include <string>
 
 #include "content/Content.h"
 #include "core/GameLogic.h"
 #include "core/GameState.h"
+#include "core/InputSystem.h"
 #include "render/Renderer.h"
 #include "render/Window.h"
 #include "scenes/AppContext.h"
@@ -14,6 +16,7 @@
 #include "scenes/SettingsScene.h"
 #include "systems/SaveSystem.h"
 #include "ui/UIContext.h"
+#include "util/Random.h"
 
 namespace game {
 static bool saveExists(const char* path) {
@@ -22,6 +25,17 @@ static bool saveExists(const char* path) {
 }
 
 void MainMenuScene::onEnter(AppContext& ctx) {
+    const std::string base = std::string(EMPIRE_ASSETS_DIR) + "/audio/";
+    m_sfxClickOn = ctx.audio.loadSound("click_double_on",
+                                       {base + "sfx/click_double_on.wav"});
+    m_sfxClickOff = ctx.audio.loadSound("click_double_off",
+                                        {base + "sfx/click_double_off.wav"});
+    m_sfxBookClose =
+        ctx.audio.loadSound("book_close", {base + "sfx/book_close.wav"});
+    m_sfxCancel = ctx.audio.loadSound("cancel", {base + "sfx/cancel.wav"});
+
+    ctx.audio.playMusic(base + "music/main_menu(tmp).wav", 0.8f, true);
+
     buildUi(ctx);
 }
 
@@ -37,6 +51,11 @@ void MainMenuScene::update(AppContext& ctx, double dt) {
                         (static_cast<float>(h) - measured.y) * 0.5f};
     m_root.arrange(ctx.ui, pos, measured);
     m_root.update(ctx.ui);
+
+    const auto& in = ctx.input.state();
+    if (in.isMousePressed(mouse::Left) && ctx.ui.hovered == nullptr) {
+        playEmptyClick(ctx);
+    }
 }
 
 void MainMenuScene::render(AppContext& ctx) {
@@ -67,7 +86,8 @@ void MainMenuScene::buildUi(AppContext& ctx) {
     const bool hasSave = saveExists(ctx.savePath);
 
     m_newGame = m_root.add<ui::Button>("New game");
-    m_newGame->OnClick = [&ctx] {
+    m_newGame->OnClick = [this, &ctx] {
+        ctx.audio.play(m_sfxClickOn, 0.8f);
         content::initNewGame(ctx.state);
         ctx.state.lastSaveTimestamp = SaveSystem::nowSeconds();
         ctx.scenes.requestReplace(std::make_unique<GameScene>());
@@ -75,7 +95,8 @@ void MainMenuScene::buildUi(AppContext& ctx) {
 
     m_continue = m_root.add<ui::Button>("Continue");
     m_continue->enabled = hasSave;
-    m_continue->OnClick = [&ctx] {
+    m_continue->OnClick = [this, &ctx] {
+        ctx.audio.play(m_sfxClickOn, 0.8f);
         if (!ctx.save.load(ctx.state, ctx.savePath)) {
             return;
         }
@@ -87,14 +108,26 @@ void MainMenuScene::buildUi(AppContext& ctx) {
     };
 
     m_settings = m_root.add<ui::Button>("Settings");
-    m_settings->OnClick = [&ctx] {
+    m_settings->OnClick = [this, &ctx] {
+        ctx.audio.play(m_sfxBookClose, 0.9f);
         ctx.scenes.requestReplace(std::make_unique<SettingsScene>());
     };
 
     m_root.add<ui::Spacer>(glm::vec2{0.0f, 4.0f});
 
     m_quit = m_root.add<ui::Button>("Quit");
-    m_quit->OnClick = [&ctx] { ctx.window.requestClose(); };
+    m_quit->OnClick = [this, &ctx] {
+        ctx.audio.play(m_sfxCancel, 0.9f);
+        ctx.window.requestClose();
+    };
+}
+
+void MainMenuScene::playEmptyClick(AppContext& ctx) {
+    if (Rng::frand(0.0f, 1.0f) < 0.5f) {
+        ctx.audio.play(m_sfxClickOff, 0.6f);
+    } else {
+        ctx.audio.play(m_sfxClickOn, 0.6f);
+    }
 }
 
 }  // namespace game

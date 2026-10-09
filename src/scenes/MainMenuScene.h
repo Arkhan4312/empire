@@ -1,4 +1,5 @@
 #pragma once
+#include "audio/AudioSystem.h"
 #include "scenes/Scene.h"
 #include "ui/Widgets.h"
 
@@ -15,6 +16,8 @@ public:
 private:
     void buildUi(AppContext& ctx);
 
+    void playEmptyClick(AppContext& ctx);
+
     ui::Container m_root;
     ui::Label* m_title = nullptr;
     ui::Label* m_hint = nullptr;
@@ -22,5 +25,10 @@ private:
     ui::Button* m_continue = nullptr;
     ui::Button* m_settings = nullptr;
     ui::Button* m_quit = nullptr;
+
+    audio::SoundId m_sfxClickOn = audio::kInvalidSound;
+    audio::SoundId m_sfxClickOff = audio::kInvalidSound;
+    audio::SoundId m_sfxBookClose = audio::kInvalidSound;
+    audio::SoundId m_sfxCancel = audio::kInvalidSound;
 };
 }  // namespace game

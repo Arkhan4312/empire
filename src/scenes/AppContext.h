@@ -8,6 +8,10 @@ class InputSystem;
 class SaveSystem;
 class SceneManager;
 struct Settings;
+namespace audio {
+class AudioSystem;
+}
+
 namespace render {
 class Window;
 class Renderer;
@@ -27,6 +31,7 @@ struct AppContext {
     InputSystem& input;
     ui::UIContext& ui;
     SceneManager& scenes;
+    audio::AudioSystem& audio;
 
     render::Font* font = nullptr;
     const char* savePath = "save.json";

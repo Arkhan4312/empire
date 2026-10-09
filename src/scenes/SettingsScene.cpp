@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "audio/AudioSystem.h"
 #include "core/Input.h"
 #include "core/InputSystem.h"
 #include "render/Renderer.h"
@@ -13,6 +14,7 @@
 #include "settings/KeyBindings.h"
 #include "settings/Settings.h"
 #include "ui/UIContext.h"
+
 namespace game {
 namespace {
 static ui::Label* addSectionHeader(ui::Container& root, const char* text) {
@@ -36,6 +38,7 @@ void SettingsScene::update(AppContext& ctx, double /*dt*/) {
         }
     }
     if (!keyBindWaiting && ctx.input.state().isKeyPressed(keys::Escape)) {
+        ctx.audio.play(ctx.audio.loadSound("cancel", {}), 0.9f);
         ctx.scenes.requestReplace(std::make_unique<MainMenuScene>());
         return;
     }
@@ -72,7 +75,6 @@ void SettingsScene::buildUi(AppContext& ctx) {
     m_viewport.borderColor = ctx.ui.theme.panelBorder;
     m_viewport.borderWidth = 1.0f;
     m_viewport.scrollSpeed = 48.0f;
-
 
     m_root.clear();
     m_root.padding = 24.0f;
