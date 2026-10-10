@@ -42,7 +42,13 @@ struct UIContext {
     void endFrame();
 
     glm::vec2 mousePos() const {
-        return input ? input->mousePos : glm::vec2(0.0f);
+        if (!input) {
+            return glm::vec2(0.0f);
+        }
+        if (renderer) {
+            return renderer->realToVirtual(input->mousePos);
+        }
+        return input->mousePos;
     }
     bool mousePressed(int b = mouse::Left) const {
         return input && input->isMousePressed(b);

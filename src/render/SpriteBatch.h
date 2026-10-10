@@ -40,6 +40,12 @@ public:
                 const glm::vec4& color = glm::vec4(1.0f),
                 float rotationRad = 0.0f);
     void flush();
+    void setBrightness(float b) noexcept {
+        m_brightness = b;
+    }
+    float brightness() const noexcept {
+        return m_brightness;
+    }
 
 private:
     void pushQuad(const Texture& tex, const glm::vec2& pos,
@@ -55,6 +61,7 @@ private:
 
     glm::mat4 m_viewProj{1.0f};
     std::uint32_t m_currentTexture = 0;
+    float m_brightness = 1.0f;
     std::size_t m_maxQuads = 4096;
     bool m_begun = false;
     bool m_initialized = false;

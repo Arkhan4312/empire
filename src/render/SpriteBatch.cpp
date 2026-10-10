@@ -157,6 +157,11 @@ void SpriteBatch::flush() {
 void SpriteBatch::pushQuad(const Texture&, const glm::vec2& pos,
                            const glm::vec2& size, const glm::vec4& uvRect,
                            const glm::vec4& color, float rotationRad) {
+    glm::vec4 tint = color;
+    tint.r = std::min(1.0f, tint.r * m_brightness);
+    tint.g = std::min(1.0f, tint.g * m_brightness);
+    tint.b = std::min(1.0f, tint.b * m_brightness);
+
     const float c = std::cos(rotationRad);
     const float s = std::sin(rotationRad);
     const glm::vec2 half = size * 0.5f;
@@ -176,10 +181,10 @@ void SpriteBatch::pushQuad(const Texture&, const glm::vec2& pos,
     const float u1 = uvRect.z;
     const float v1 = uvRect.w;
 
-    m_vertices.push_back({p0, {u0, v0}, color});
-    m_vertices.push_back({p1, {u1, v0}, color});
-    m_vertices.push_back({p2, {u1, v1}, color});
-    m_vertices.push_back({p3, {u0, v1}, color});
+    m_vertices.push_back({p0, {u0, v0}, tint});
+    m_vertices.push_back({p1, {u1, v0}, tint});
+    m_vertices.push_back({p2, {u1, v1}, tint});
+    m_vertices.push_back({p3, {u0, v1}, tint});
 }
 
 }  // namespace game::render

@@ -40,15 +40,14 @@ void MainMenuScene::onEnter(AppContext& ctx) {
 }
 
 void MainMenuScene::update(AppContext& ctx, double dt) {
-    int w = 0;
-    int h = 0;
-    ctx.window.framebufferSize(w, h);
+    const glm::vec2 screen = ctx.ui.screenSize();
+
 
     const glm::vec2 avail{460.0f, 340.0f};
     const glm::vec2 measured = m_root.measure(ctx.ui, avail);
 
-    const glm::vec2 pos{(static_cast<float>(w) - measured.x) * 0.5f,
-                        (static_cast<float>(h) - measured.y) * 0.5f};
+    const glm::vec2 pos{(screen.x - measured.x) * 0.5f,
+                        (screen.y - measured.y) * 0.5f};
     m_root.arrange(ctx.ui, pos, measured);
     m_root.update(ctx.ui);
 

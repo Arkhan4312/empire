@@ -6,51 +6,60 @@
 
 namespace game::audio {
 
-    using SoundId = std::uint32_t;
-    inline constexpr SoundId kInvalidSound = 0u;
+using SoundId = std::uint32_t;
+inline constexpr SoundId kInvalidSound = 0u;
 
-    struct SoundDesc {
-        std::string path;
-        float baseVolume = 1.0f;
-        bool loop = false;
-    };
+struct SoundDesc {
+    std::string path;
+    float baseVolume = 1.0f;
+    bool loop = false;
+};
 
-    class AudioSystem {
-    public:
-        AudioSystem();
-        ~AudioSystem();
-        AudioSystem(const AudioSystem&) = delete;
-        AudioSystem& operator=(const AudioSystem&) = delete;
+struct AudioDeviceInfo {
+    std::string name;
+};
 
-        bool init(); // create device+engine; false if unavailable
-        void shutdown();
-        bool ready() const noexcept;
+class AudioSystem {
+public:
+    AudioSystem();
+    ~AudioSystem();
+    AudioSystem(const AudioSystem&) = delete;
+    AudioSystem& operator=(const AudioSystem&) = delete;
 
-        // Sfx 
-        SoundId loadSound(std::string_view name, const SoundDesc& desc);
-        void unloadAllSounds();
+    bool init();  // create device+engine; false if unavailable
+    void shutdown();
+    bool ready() const noexcept;
 
-        void play(SoundId id, float volume = 1.0f, float pitch = 1.0f);
-        void playAt(SoundId id, float panX, float volume = 1.0f);
+    // Sfx
+    SoundId loadSound(std::string_view name, const SoundDesc& desc);
+    void unloadAllSounds();
 
-        void playMusic(std::string_view path, float fadeInSec = 0.8f, bool loop = true);
-        void stopMusic(float fadeOutSec = 0.8f);
-        void crossfadeTo(std::string_view path, float durationSec = 1.2f, bool loop = true);
+    void play(SoundId id, float volume = 1.0f, float pitch = 1.0f);
+    void playAt(SoundId id, float panX, float volume = 1.0f);
 
-        void setMasterVolume(float v);
-        void setSfxVolume(float v);
-        void setMusicVolume(float v);
-        float masterVolume() const noexcept;
-        float sfxVolume() const noexcept;
-        float musicVolume() const noexcept;
+    void playMusic(std::string_view path, float fadeInSec = 0.8f,
+                   bool loop = true);
+    void stopMusic(float fadeOutSec = 0.8f);
+    void crossfadeTo(std::string_view path, float durationSec = 1.2f,
+                     bool loop = true);
 
-        void update(float dt);
+    void setMasterVolume(float v);
+    void setSfxVolume(float v);
+    void setMusicVolume(float v);
+    float masterVolume() const noexcept;
+    float sfxVolume() const noexcept;
+    float musicVolume() const noexcept;
 
-        void setPaused(bool paused);
-        bool paused() const noexcept;
+    void update(float dt);
 
-    private:
-        struct Impl;
-        Impl* m_impl = nullptr;
-    };
-}
+    void setPaused(bool paused);
+    bool paused() const noexcept;
+    std::vector<AudioDeviceInfo> listOutputDevices() const;
+    int currentOutputDevice() const noexcept;
+    bool setOutputDevice(int index);
+
+private:
+    struct Impl;
+    Impl* m_impl = nullptr;
+};
+}  // namespace game::audio

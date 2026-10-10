@@ -19,12 +19,26 @@ constexpr float kVolumeEpsilon = 1.0e-4f;
 }  // namespace
 
 struct AudioSystem::Impl {
+    ma_context context{};
+    bool contextInited = false;
     ma_engine engine{};
     bool engineInited = false;
+
+    std::vector<ma_device_info> playbackDevices;
+    int currentDevice = -1;
 
     ma_sound_group masterGroup{};
     ma_sound_group sfxGroup{};
     ma_sound_group musicGroup{};
+
+    struct SoundRec {
+        std::string name;
+        SoundDesc desc;
+    };
+    std::vector<SoundRec> soundRegistry;
+
+    std::string currentMusicPath;
+    bool currentMusicLoop = true;
 
     struct SfxVoice {
         ma_sound sound{};
@@ -95,6 +109,8 @@ struct AudioSystem::Impl {
         m.fadeElapsed = 0.0f;
         m.fadeSeconds = fadeInSec > 0.0f ? fadeInSec : 0.0f;
         m.path = path;
+        currentMusicPath = path;
+        currentMusicLoop = loop;
 
         ma_sound_set_volume(&m.sound, 0.0f);
         ma_sound_set_looping(&m.sound, loop ? MA_TRUE : MA_FALSE);
@@ -154,6 +170,61 @@ struct AudioSystem::Impl {
         ma_sound_start(&chosen->sound);
         return true;
     }
+
+    bool initEngine(int deviceIndex) {
+        ma_engine_config ecfg = ma_engine_config_init();
+        ecfg.pContext = &context;
+        if (deviceIndex >= 0 &&
+            deviceIndex < static_cast<int>(playbackDevices.size())) {
+            ecfg.pPlaybackDeviceID = &playbackDevices[deviceIndex].id;
+        }
+        if (ma_engine_init(&ecfg, &engine) != MA_SUCCESS) {
+            return false;
+        }
+        if (ma_sound_group_init(&engine, 0, nullptr, &masterGroup) !=
+                MA_SUCCESS ||
+            ma_sound_group_init(&engine, 0, &masterGroup, &sfxGroup) !=
+                MA_SUCCESS ||
+            ma_sound_group_init(&engine, 0, &masterGroup, &musicGroup) !=
+                MA_SUCCESS) {
+            ma_engine_uninit(&engine);
+            return false;
+        }
+        engineInited = true;
+        currentDevice = deviceIndex;
+        applyVolumes();
+        return true;
+    }
+
+    void teardownEngine() {
+        if (!engineInited) {
+            return;
+        }
+        for (auto& m : music) {
+            if (m.initialized) {
+                ma_sound_stop(&m.sound);
+                ma_sound_uninit(&m.sound);
+            }
+            m = {};
+        }
+        for (auto& e : sfxByName) {
+            for (auto& v : e.voices) {
+                if (v && v->initialized) {
+                    ma_sound_stop(&v->sound);
+                    ma_sound_uninit(&v->sound);
+                }
+            }
+            e.voices.clear();
+        }
+        sfxByName.clear();
+        sfxIdMap.clear();
+
+        ma_sound_group_uninit(&musicGroup);
+        ma_sound_group_uninit(&sfxGroup);
+        ma_sound_group_uninit(&masterGroup);
+        ma_engine_uninit(&engine);
+        engineInited = false;
+    }
 };
 
 AudioSystem::AudioSystem() : m_impl(new Impl()) {
@@ -169,37 +240,27 @@ bool AudioSystem::init() {
     if (!m_impl) {
         return false;
     }
-    if (m_impl->engineInited) {
+    if (m_impl->contextInited) {
         return true;
     }
-    ma_engine_config cfg = ma_engine_config_init();
-    if (ma_engine_init(&cfg, &m_impl->engine) != MA_SUCCESS) {
-        std::fprintf(stderr, "[Audio] ma_engine_init failed\n");
+    ma_context_config ccfg = ma_context_config_init();
+    if (ma_context_init(nullptr, 0, &ccfg, &m_impl->context) != MA_SUCCESS) {
+        std::fprintf(stderr, "[Audio] ma_context_init failed\n");
         return false;
     }
-    if (ma_sound_group_init(&m_impl->engine, 0, nullptr,
-                            &m_impl->masterGroup) != MA_SUCCESS) {
-        std::fprintf(stderr, "[Audio] master group init failed\n");
-        ma_engine_uninit(&m_impl->engine);
+    m_impl->contextInited = true;
+
+    ma_device_info* pPlayback = nullptr;
+    ma_uint32 playbackCount = 0;
+    if (ma_context_get_devices(&m_impl->context, &pPlayback, &playbackCount,
+                               nullptr, nullptr) == MA_SUCCESS) {
+        m_impl->playbackDevices.assign(pPlayback, pPlayback + playbackCount);
+    }
+    if (!m_impl->initEngine(-1)) {
+        ma_context_uninit(&m_impl->context);
+        m_impl->contextInited = false;
         return false;
     }
-    if (ma_sound_group_init(&m_impl->engine, 0, &m_impl->masterGroup,
-                            &m_impl->sfxGroup) != MA_SUCCESS) {
-        std::fprintf(stderr, "[Audio] sfx group init failde\n");
-        ma_sound_group_uninit(&m_impl->masterGroup);
-        ma_engine_uninit(&m_impl->engine);
-        return false;
-    }
-    if (ma_sound_group_init(&m_impl->engine, 0, &m_impl->masterGroup,
-                            &m_impl->musicGroup) != MA_SUCCESS) {
-        std::fprintf(stderr, "[Audio] music group init failed\n");
-        ma_sound_group_uninit(&m_impl->masterGroup);
-        ma_sound_group_uninit(&m_impl->sfxGroup);
-        ma_engine_uninit(&m_impl->engine);
-        return false;
-    }
-    m_impl->engineInited = true;
-    m_impl->applyVolumes();
     return true;
 }
 
@@ -207,37 +268,11 @@ void AudioSystem::shutdown() {
     if (!m_impl) {
         return;
     }
-    if (!m_impl->engineInited) {
-        return;
+    m_impl->teardownEngine();
+    if (m_impl->contextInited) {
+        ma_context_uninit(&m_impl->context);
+        m_impl->contextInited = false;
     }
-    // Music
-    for (auto& m : m_impl->music) {
-        if (m.initialized) {
-            ma_sound_stop(&m.sound);
-            ma_sound_uninit(&m.sound);
-        }
-        m = {};
-    }
-    // sfx
-    for (auto& s : m_impl->sfxByName) {
-        for (auto& v : s.voices) {
-            if (v && v->initialized) {
-                ma_sound_stop(&v->sound);
-                ma_sound_uninit(&v->sound);
-            }
-        }
-        s.voices.clear();
-    }
-
-    m_impl->sfxByName.clear();
-    m_impl->sfxIdMap.clear();
-
-    ma_sound_group_uninit(&m_impl->musicGroup);
-    ma_sound_group_uninit(&m_impl->sfxGroup);
-    ma_sound_group_uninit(&m_impl->masterGroup);
-
-    ma_engine_uninit(&m_impl->engine);
-    m_impl->engineInited = false;
 }
 
 bool AudioSystem::ready() const noexcept {
@@ -291,6 +326,7 @@ SoundId AudioSystem::loadSound(std::string_view name, const SoundDesc& desc) {
 
     I.sfxByName.push_back(std::move(e));
     I.sfxIdMap[key] = id;
+    I.soundRegistry.push_back({key, desc});
     return id;
 }
 
@@ -480,6 +516,62 @@ void AudioSystem::setPaused(bool paused) {
 
 bool AudioSystem::paused() const noexcept {
     return m_impl && m_impl->isPaused;
+}
+
+std::vector<AudioDeviceInfo> AudioSystem::listOutputDevices() const {
+    std::vector<AudioDeviceInfo> out;
+    if (!m_impl) {
+        return out;
+    }
+    for (const auto& d : m_impl->playbackDevices) {
+        out.push_back({std::string(d.name)});
+    }
+    if (out.empty()) {
+        out.push_back({"Default"});
+    }
+    return out;
+}
+
+int AudioSystem::currentOutputDevice() const noexcept {
+    return m_impl ? m_impl->currentDevice : -1;
+}
+
+bool AudioSystem::setOutputDevice(int index) {
+    if (!m_impl || !m_impl->contextInited) {
+        return false;
+    }
+    if (index < -1 ||
+        index >= static_cast<int>(m_impl->playbackDevices.size())) {
+        return false;
+    }
+    if (index == m_impl->currentDevice) {
+        return true;
+    }
+    auto& I = *m_impl;
+
+    const std::string musicPath = I.currentMusicPath;
+    const bool musicLoop = I.currentMusicLoop;
+    const auto registryCopy = I.soundRegistry;
+
+    I.teardownEngine();
+
+    if (!I.initEngine(index)) {
+        std::fprintf(stderr,
+                     "[Audio] device switch failed, falling back to default\n");
+        if (!I.initEngine(-1)) {
+            return false;
+        }
+    }
+
+    I.soundRegistry.clear();
+    for (const auto& rec : registryCopy) {
+        loadSound(rec.name, rec.desc);
+    }
+
+    if (!musicPath.empty()) {
+        playMusic(musicPath, 0.3f, musicLoop);
+    }
+    return true;
 }
 
 }  // namespace game::audio

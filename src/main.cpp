@@ -16,9 +16,10 @@
 #include "scenes/MainMenuScene.h"
 #include "scenes/SceneManager.h"
 #include "settings/Settings.h"
+#include "settings/SettingsSystem.h"
+#include "settings/WindowMode.h"
 #include "systems/SaveSystem.h"
 #include "ui/UIContext.h"
-
 using namespace game;
 
 static std::int64_t nowSeconds() {
@@ -29,11 +30,13 @@ static std::int64_t nowSeconds() {
 
 int main() {
     const char* kSavePath = "save.json";
-
+    const char* kSettingsPath = "settings.json";
     GameState state;
     GameLogic logic;
     SaveSystem save;
     Settings settings;
+    settings::load(settings, kSettingsPath);
+
     audio::AudioSystem audio;
     if (!audio.init()) {
         std::fprintf(stderr, "[Init] audio disabled\n");
@@ -64,6 +67,12 @@ int main() {
         window.destroy();
         return 1;
     }
+    window.applyVsync(settings.vsync);
+    window.applyWindowMode(
+        settings.windowMode, kResolutions[settings.resolutionIndex].w,
+        kResolutions[settings.resolutionIndex].h, settings.monitorIndex);
+    renderer.setUIScale(settings.uiScale);
+    renderer.setBrightness(settings.brightness);
 
     render::Font font;
     const bool fontOk = font.loadFromFile(
@@ -135,18 +144,57 @@ int main() {
         audio.setMasterVolume(settings.masterVolume);
         audio.setSfxVolume(settings.sfxVolume);
         audio.setMusicVolume(settings.musicVolume);
+
+        static Settings appliedSnapshot = settings;
+        if (appliedSnapshot.vsync != settings.vsync) {
+            window.applyVsync(settings.vsync);
+        }
+        if (appliedSnapshot.windowMode != settings.windowMode ||
+            appliedSnapshot.monitorIndex != settings.monitorIndex ||
+            appliedSnapshot.resolutionIndex != settings.resolutionIndex) {
+            window.applyWindowMode(settings.windowMode,
+                                   kResolutions[settings.resolutionIndex].w,
+                                   kResolutions[settings.resolutionIndex].h,
+                                   settings.monitorIndex);
+            window.applyVsync(settings.vsync);
+        }
+        if (appliedSnapshot.uiScale != settings.uiScale) {
+            renderer.setUIScale(settings.uiScale);
+        }
+        if (appliedSnapshot.brightness != settings.brightness) {
+            renderer.setBrightness(settings.brightness);
+        }
+        appliedSnapshot = settings;
         audio.update(static_cast<float>(dt));
 
         renderer.beginFrame();
         if (Scene* s = scenes.current()) {
             s->render(ctx);
         }
+        if (settings.showFPS && fontOk) {
+            static double fpsAccum = 0.0;
+            static int fpsFrames = 0;
+            static float fpsValue = 0.0f;
+
+            fpsAccum += dt;
+            ++fpsFrames;
+            if (fpsAccum >= 0.5) {
+                fpsValue = static_cast<float>(fpsFrames / fpsAccum);
+                fpsAccum = 0.0;
+                fpsFrames = 0;
+            }
+
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), "FPS: %.1f", fpsValue);
+            renderer.drawText(font, buf, {8.0f, 8.0f}, {0.9f, 0.9f, 0.9f, 0.6f},
+                              1.0f);
+        }
         renderer.endFrame();
 
         uiCtx.endFrame();
         window.swapBuffers();
     }
-
+    settings::save(settings, kSettingsPath);
     save.save(state, kSavePath);
 
     audio.shutdown();

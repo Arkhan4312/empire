@@ -106,6 +106,7 @@ if(EMPIRE_BUILD_APP)
 	src/render/Renderer.cpp
 	src/audio/miniaudio_impl.cpp
 	src/audio/AudioSystem.cpp
+	src/settings/SettingsSystem.cpp
 
 	src/ui/Widgets.cpp
 	src/ui/UIContext.cpp

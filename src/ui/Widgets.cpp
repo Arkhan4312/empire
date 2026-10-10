@@ -677,12 +677,22 @@ void ChoiceRow::update(UIContext& ctx) {
             break;
         }
     }
+    auto setValue = [&](int v) {
+        if (v == *value) {
+            return;
+        }
+        *value = v;
+        if (OnValueChanged) {
+            OnValueChanged(v);
+        }
+    };
+
     if (m_hoveredSegment >= 0) {
         if (!ctx.hovered) {
             ctx.hovered = this;
         }
         if (ctx.mousePressed()) {
-            *value = m_hoveredSegment;
+            setValue(m_hoveredSegment);
             ctx.setFocus(this);
         }
     }
@@ -693,12 +703,12 @@ void ChoiceRow::update(UIContext& ctx) {
     }
     if (ctx.focused == this && ctx.input) {
         const int n = static_cast<int>(options.size());
-        if (n > 0 && value) {
+        if (n > 0) {
             if (ctx.input->isKeyPressed(keys::Left) && *value > 0) {
-                --*value;
+                setValue(*value - 1);
             }
             if (ctx.input->isKeyPressed(keys::Right) && *value < n - 1) {
-                ++*value;
+                setValue(*value + 1);
             }
         }
     }
@@ -1097,23 +1107,14 @@ void ScrollView::render(UIContext& ctx) {
         }
     }
 
-    const glm::vec2 screen = ctx.screenSize();
-    const int fbH = static_cast<int>(screen.y);
-    const int sx = static_cast<int>(m_pos.x);
-    const int sy = fbH - static_cast<int>(m_pos.y + m_size.y);
-    const int sw = static_cast<int>(m_size.x);
-    const int sh = static_cast<int>(m_size.y);
-
     batch.flush();
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(sx, sy, sw, sh);
+    ctx.renderer->setScissorVirtual(m_pos, m_size);
 
     if (child) {
         child->render(ctx);
     }
-
     batch.flush();
-    glDisable(GL_SCISSOR_TEST);
+    ctx.renderer->clearScissor();
 
     if (drawScrollbar && m_maxScroll > 0.0f && m_size.y > 0.0f &&
         m_contentHeight > 0.0f) {

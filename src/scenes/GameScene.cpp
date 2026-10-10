@@ -116,14 +116,11 @@ void GameScene::update(AppContext& ctx, double dt) {
     updateTransient(static_cast<float>(dt));
     refreshLabels(ctx);
 
-    int w = 0;
-    int h = 0;
-    ctx.window.framebufferSize(w, h);
+    const glm::vec2 screen = ctx.ui.screenSize();
     const float margin = 20.0f;
     {
-        const glm::vec2 avail{320.0f, static_cast<float>(h) - margin * 2.0f};
+        const glm::vec2 avail{320.0f, screen.y - margin * 2.0f};
         glm::vec2 measured = m_hud.measure(ctx.ui, avail);
-
         measured.x = 320.0f;
         measured.y = std::min(measured.y, avail.y);
 
@@ -131,10 +128,10 @@ void GameScene::update(AppContext& ctx, double dt) {
         m_hud.update(ctx.ui);
     }
     {
-        const glm::vec2 avail{320.0f, static_cast<float>(h) - margin * 2.0f};
+        const glm::vec2 avail{320.0f, screen.y - margin * 2.0f};
         const glm::vec2 measured = m_actions.measure(ctx.ui, avail);
-        const glm::vec2 pos{static_cast<float>(w) - measured.x - margin,
-                            static_cast<float>(h) - measured.y - margin};
+        const glm::vec2 pos{screen.x - measured.x - margin,
+                            screen.y - measured.y - margin};
         m_actions.arrange(ctx.ui, pos, measured);
         m_actions.update(ctx.ui);
     }
@@ -291,7 +288,7 @@ void GameScene::spawnFloater(AppContext& ctx, std::string text,
     f.text = std::move(text);
     f.color = color;
 
-    const glm::vec2 m = ctx.input.state().mousePos;
+    const glm::vec2 m = ctx.ui.mousePos();
     f.pos = {m.x + Rng::frand(-12.0f, 12.0f), m.y + Rng::frand(-8.0f, 8.0f)};
     f.velocity = {Rng::frand(-10.0f, 10.0f), -60.0f};
     f.life = 1.1f;

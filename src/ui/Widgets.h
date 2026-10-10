@@ -76,7 +76,6 @@ public:
     VAlign valign = VAlign::Middle;
     bool wrap = false;
 
-
     Label() = default;
     explicit Label(std::string t) : text(std::move(t)) {
     }
@@ -198,7 +197,7 @@ public:
     float labelWidth = 140.0f;
     float segmentPadding = 8.0f;
     float spacing = 4.0f;
-
+    std::function<void(int)> OnValueChanged;
     glm::vec2 measure(UIContext& ctx, const glm::vec2& available) override;
     void arrange(UIContext& ctx, const glm::vec2& pos,
                  const glm::vec2& size) override;

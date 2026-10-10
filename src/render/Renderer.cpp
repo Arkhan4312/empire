@@ -50,15 +50,33 @@ void Renderer::beginFrame() {
     if (w <= 0 || h <= 0) {
         return;
     }
+    const float vW = kBaseVirtualW / m_uiScale;
+    const float vH = kBaseVirtualH / m_uiScale;
+
+    const float sx = static_cast<float>(w) / vW;
+    const float sy = static_cast<float>(h) / vH;
+    const float scale = std::min(sx, sy);
+
+    const int vpW = static_cast<int>(vW * scale);
+    const int vpH = static_cast<int>(vH * scale);
+    const int vpX = (w - vpW) / 2;
+    const int vpY = (h - vpH) / 2;
 
     glViewport(0, 0, w, h);
-    m_screenSize = {static_cast<float>(w), static_cast<float>(h)};
-    glClearColor(m_clearColor.r, m_clearColor.g, m_clearColor.b,
-                 m_clearColor.a);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    const glm::mat4 proj = glm::ortho(0.0f, static_cast<float>(w),
-                                      static_cast<float>(h), 0.0f, -1.0f, 1.0f);
+    glViewport(vpX, vpY, vpW, vpH);
+    m_virtualSize = {vW, vH};
+    m_screenSize = {vW, vH};
+    m_scale = scale;
+    m_viewport = {static_cast<float>(vpX), static_cast<float>(vpY),
+                  static_cast<float>(vpW), static_cast<float>(vpH)};
+    glClearColor(m_clearColor.r * m_brightness, m_clearColor.g * m_brightness,
+                 m_clearColor.b * m_brightness, m_clearColor.a);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    const glm::mat4 proj = glm::ortho(0.0f, vW, vH, 0.0f, -1.0f, 1.0f);
     m_batch.begin(proj);
 }
 
@@ -113,6 +131,61 @@ void Renderer::drawText(const Font& font, std::string_view text,
         }
         penX += g->xadvance * scale;
     }
+}
+
+void Renderer::setUIScale(float s) {
+    if (s < 0.75f) {
+        s = 0.75f;
+    }
+    if (s > 2.0f) {
+        s = 2.0f;
+    }
+    m_uiScale = s;
+}
+
+glm::vec2 Renderer::realToVirtual(const glm::vec2& real) const noexcept {
+    if (m_scale <= 0.0f) {
+        return real;
+    }
+    return glm::vec2((real.x - m_viewport.x) / m_scale,
+                     (real.y - m_viewport.y) / m_scale);
+}
+
+void Renderer::setScissorVirtual(const glm::vec2& pos, const glm::vec2& size) {
+    int winW = 0;
+    int winH = 0;
+    if (m_window) {
+        m_window->framebufferSize(winW, winH);
+    }
+    if (winW <= 0 || winH <= 0) {
+        return;
+    }
+    const float realX = m_viewport.x + pos.x * m_scale;
+    const float realY = m_viewport.y + pos.y * m_scale;
+    const float realW = size.x * m_scale;
+    const float realH = size.y * m_scale;
+
+    const int glY = winH - static_cast<int>(std::round(realY + realH));
+
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(static_cast<int>(std::round(realX)), glY,
+              static_cast<int>(std::round(realW)),
+              static_cast<int>(std::round(realH)));
+}
+
+void Renderer::clearScissor() {
+    glDisable(GL_SCISSOR_TEST);
+}
+
+void Renderer::setBrightness(float b) noexcept {
+    if (b < 0.5f) {
+        b = 0.5f;
+    }
+    if (b > 1.5f) {
+        b = 1.5f;
+    }
+    m_brightness = b;
+    m_batch.setBrightness(b);
 }
 
 }  // namespace game::render
