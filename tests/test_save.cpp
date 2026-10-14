@@ -4,10 +4,11 @@
 #include <filesystem>
 #include <string>
 
-#include "content/Content.h"
-#include "core/GameLogic.h"
-#include "core/GameState.h"
-#include "systems/SaveSystem.h"
+
+#include <empire/game/content/Content.h>
+#include <empire/game/logic/GameLogic.h>
+#include <empire/game/state/GameState.h>
+#include <empire/game/save/SaveSystem.h>
 using namespace game;
 using Catch::Approx;
 

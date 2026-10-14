@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "core/GameState.h"
+#include <empire/game/state/GameState.h>
 
 using namespace game;
 
