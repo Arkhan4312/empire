@@ -1,105 +1,606 @@
-﻿{
-    "version": 3,
-    "configurePresets": [
-        {
-            "name": "windows-base",
-            "hidden": true,
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "installDir": "${sourceDir}/out/install/${presetName}",
-            "cacheVariables": {
-                "CMAKE_C_COMPILER": "cl.exe",
-                "CMAKE_CXX_COMPILER": "cl.exe"
-            },
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            }
-        },
-        {
-            "name": "x64-debug",
-            "displayName": "x64 Debug",
-            "inherits": "windows-base",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "$env{VSINSTALLDIR}Common7/IDE/CommonExtensions/Microsoft/CMake/cmake/Microsoft/SegmentHeap.cmake"
-            }
-        },
-        {
-            "name": "x64-release",
-            "displayName": "x64 Release",
-            "inherits": "x64-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "$env{VSINSTALLDIR}Common7/IDE/CommonExtensions/Microsoft/CMake/cmake/Microsoft/SegmentHeap.cmake"
-            }
-        },
-        {
-            "name": "x86-debug",
-            "displayName": "x86 Debug",
-            "inherits": "windows-base",
-            "architecture": {
-                "value": "x86",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "$env{VSINSTALLDIR}Common7/IDE/CommonExtensions/Microsoft/CMake/cmake/Microsoft/SegmentHeap.cmake"
-            }
-        },
-        {
-            "name": "x86-release",
-            "displayName": "x86 Release",
-            "inherits": "x86-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "$env{VSINSTALLDIR}Common7/IDE/CommonExtensions/Microsoft/CMake/cmake/Microsoft/SegmentHeap.cmake"
-            }
-        },
-        {
-            "name": "linux-debug",
-            "displayName": "Linux Debug",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "installDir": "${sourceDir}/out/install/${presetName}",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            },
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "vendor": {
-                "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-                    "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
-                }
-            }
-        },
-        {
-            "name": "macos-debug",
-            "displayName": "macOS Debug",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "installDir": "${sourceDir}/out/install/${presetName}",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
-            },
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Darwin"
-            },
-            "vendor": {
-                "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-                    "sourceDir": "$env{HOME}/.vs/$ms{projectDirName}"
-                }
-            }
-        }
-    ]
+{
+  "$schema": "https://raw.githubusercontent.com/Kitware/CMake/master/Help/manual/presets/schema.json",
+  "version": 8,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "warnings": {
+        "dev": true,
+        "deprecated": true
+      },
+      "cacheVariables": {
+        "EMPIRE_BUILD_APP": "ON",
+        "EMPIRE_BUILD_TESTS": "ON",
+        "EMPIRE_WARNINGS_AS_ERRORS": "OFF",
+        "EMPIRE_ENGINE_INSTALL": "OFF"
+      }
+    },
+
+    {
+      "name": "windows-vs-base",
+      "hidden": true,
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "$env{VSINSTALLDIR}Common7/IDE/CommonExtensions/Microsoft/CMake/cmake/Microsoft/SegmentHeap.cmake"
+      }
+    },
+
+    {
+      "name": "vs2026-base",
+      "hidden": true,
+      "inherits": "windows-vs-base",
+      "generator": "Visual Studio 18 2026"
+    },
+    {
+      "name": "vs2026-x64-base",
+      "hidden": true,
+      "inherits": "vs2026-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "vs2026-x64-debug",
+      "displayName": "VS 2026 · x64 · Debug",
+      "inherits": "vs2026-x64-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "vs2026-x64-release",
+      "displayName": "VS 2026 · x64 · Release",
+      "inherits": "vs2026-x64-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "vs2026-x64-relwithdebinfo",
+      "displayName": "VS 2026 · x64 · RelWithDebInfo",
+      "inherits": "vs2026-x64-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    },
+    {
+      "name": "vs2026-x86-base",
+      "hidden": true,
+      "inherits": "vs2026-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "vs2026-x86-debug",
+      "displayName": "VS 2026 · x86 · Debug",
+      "inherits": "vs2026-x86-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "vs2026-x86-release",
+      "displayName": "VS 2026 · x86 · Release",
+      "inherits": "vs2026-x86-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+
+    {
+      "name": "vs2022-base",
+      "hidden": true,
+      "inherits": "windows-vs-base",
+      "generator": "Visual Studio 17 2022"
+    },
+    {
+      "name": "vs2022-x64-base",
+      "hidden": true,
+      "inherits": "vs2022-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "vs2022-x64-debug",
+      "displayName": "VS 2022 · x64 · Debug (legacy)",
+      "inherits": "vs2022-x64-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "vs2022-x64-release",
+      "displayName": "VS 2022 · x64 · Release (legacy)",
+      "inherits": "vs2022-x64-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "vs2022-x64-relwithdebinfo",
+      "displayName": "VS 2022 · x64 · RelWithDebInfo (legacy)",
+      "inherits": "vs2022-x64-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    },
+    {
+      "name": "vs2022-x86-base",
+      "hidden": true,
+      "inherits": "vs2022-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "vs2022-x86-debug",
+      "displayName": "VS 2022 · x86 · Debug (legacy)",
+      "inherits": "vs2022-x86-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "vs2022-x86-release",
+      "displayName": "VS 2022 · x86 · Release (legacy)",
+      "inherits": "vs2022-x86-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+
+    {
+      "name": "windows-ninja-base",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "ninja-msvc-debug",
+      "displayName": "Ninja · MSVC · Debug   (run from x64 Native Tools)",
+      "inherits": "windows-ninja-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "ninja-msvc-release",
+      "displayName": "Ninja · MSVC · Release (run from x64 Native Tools)",
+      "inherits": "windows-ninja-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": { "CMAKE_EXPORT_COMPILE_COMMANDS": "ON" }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Linux · GCC · Debug",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "linux-gcc-release",
+      "displayName": "Linux · GCC · Release",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux · Clang · Debug",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Linux · Clang · Release",
+      "inherits": "linux-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+
+    {
+      "name": "macos-base",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": { "CMAKE_EXPORT_COMPILE_COMMANDS": "ON" }
+    },
+    {
+      "name": "macos-arm64-debug",
+      "displayName": "macOS · arm64 · Debug",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    },
+    {
+      "name": "macos-arm64-release",
+      "displayName": "macOS · arm64 · Release",
+      "inherits": "macos-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    },
+
+    {
+      "name": "ci-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "EMPIRE_BUILD_APP": "ON",
+        "EMPIRE_BUILD_TESTS": "ON",
+        "EMPIRE_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "ci-windows",
+      "displayName": "CI · Windows · MSVC · RelWithDebInfo",
+      "inherits": [ "vs2026-base", "ci-base" ],
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    },
+    {
+      "name": "ci-linux",
+      "displayName": "CI · Linux · GCC · RelWithDebInfo",
+      "inherits": [ "linux-base", "ci-base" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "ci-macos",
+      "displayName": "CI · macOS · arm64 · RelWithDebInfo",
+      "inherits": [ "macos-base", "ci-base" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    },
+
+    {
+      "name": "x64-debug",
+      "displayName": "x64 Debug   (deprecated → vs2026-x64-debug)",
+      "inherits": "vs2026-x64-debug"
+    },
+    {
+      "name": "x64-release",
+      "displayName": "x64 Release (deprecated → vs2026-x64-release)",
+      "inherits": "vs2026-x64-release"
+    },
+    {
+      "name": "x86-debug",
+      "displayName": "x86 Debug   (deprecated → vs2026-x86-debug)",
+      "inherits": "vs2026-x86-debug"
+    },
+    {
+      "name": "x86-release",
+      "displayName": "x86 Release (deprecated → vs2026-x86-release)",
+      "inherits": "vs2026-x86-release"
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug   (deprecated → linux-gcc-debug)",
+      "inherits": "linux-gcc-debug"
+    },
+    {
+      "name": "macos-debug",
+      "displayName": "macOS Debug   (deprecated → macos-arm64-debug)",
+      "inherits": "macos-arm64-debug"
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "build-base",
+      "hidden": true
+    },
+
+    {
+      "name": "vs2026-x64-debug",
+      "inherits": "build-base",
+      "configurePreset": "vs2026-x64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-x64-release",
+      "inherits": "build-base",
+      "configurePreset": "vs2026-x64-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2026-x64-relwithdebinfo",
+      "inherits": "build-base",
+      "configurePreset": "vs2026-x64-relwithdebinfo",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "vs2026-x86-debug",
+      "inherits": "build-base",
+      "configurePreset": "vs2026-x86-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-x86-release",
+      "inherits": "build-base",
+      "configurePreset": "vs2026-x86-release",
+      "configuration": "Release"
+    },
+
+    {
+      "name": "vs2022-x64-debug",
+      "inherits": "build-base",
+      "configurePreset": "vs2022-x64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-x64-release",
+      "inherits": "build-base",
+      "configurePreset": "vs2022-x64-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-x64-relwithdebinfo",
+      "inherits": "build-base",
+      "configurePreset": "vs2022-x64-relwithdebinfo",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "vs2022-x86-debug",
+      "inherits": "build-base",
+      "configurePreset": "vs2022-x86-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-x86-release",
+      "inherits": "build-base",
+      "configurePreset": "vs2022-x86-release",
+      "configuration": "Release"
+    },
+
+    {
+      "name": "ninja-msvc-debug",
+      "inherits": "build-base",
+      "configurePreset": "ninja-msvc-debug"
+    },
+    {
+      "name": "ninja-msvc-release",
+      "inherits": "build-base",
+      "configurePreset": "ninja-msvc-release"
+    },
+
+    {
+      "name": "linux-gcc-debug",
+      "inherits": "build-base",
+      "configurePreset": "linux-gcc-debug"
+    },
+    {
+      "name": "linux-gcc-release",
+      "inherits": "build-base",
+      "configurePreset": "linux-gcc-release"
+    },
+    {
+      "name": "linux-clang-debug",
+      "inherits": "build-base",
+      "configurePreset": "linux-clang-debug"
+    },
+    {
+      "name": "linux-clang-release",
+      "inherits": "build-base",
+      "configurePreset": "linux-clang-release"
+    },
+
+    {
+      "name": "macos-arm64-debug",
+      "inherits": "build-base",
+      "configurePreset": "macos-arm64-debug"
+    },
+    {
+      "name": "macos-arm64-release",
+      "inherits": "build-base",
+      "configurePreset": "macos-arm64-release"
+    },
+
+    {
+      "name": "ci-windows",
+      "inherits": "build-base",
+      "configurePreset": "ci-windows",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "ci-linux",
+      "inherits": "build-base",
+      "configurePreset": "ci-linux"
+    },
+    {
+      "name": "ci-macos",
+      "inherits": "build-base",
+      "configurePreset": "ci-macos"
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": { "outputOnFailure": true },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": false
+      }
+    },
+
+    {
+      "name": "test-vs2026-x64-debug",
+      "inherits": "test-base",
+      "configurePreset": "vs2026-x64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "test-vs2026-x64-release",
+      "inherits": "test-base",
+      "configurePreset": "vs2026-x64-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "test-vs2026-x64-relwithdebinfo",
+      "inherits": "test-base",
+      "configurePreset": "vs2026-x64-relwithdebinfo",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "test-vs2026-x86-debug",
+      "inherits": "test-base",
+      "configurePreset": "vs2026-x86-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "test-vs2026-x86-release",
+      "inherits": "test-base",
+      "configurePreset": "vs2026-x86-release",
+      "configuration": "Release"
+    },
+
+    {
+      "name": "test-vs2022-x64-debug",
+      "inherits": "test-base",
+      "configurePreset": "vs2022-x64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "test-vs2022-x64-release",
+      "inherits": "test-base",
+      "configurePreset": "vs2022-x64-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "test-vs2022-x64-relwithdebinfo",
+      "inherits": "test-base",
+      "configurePreset": "vs2022-x64-relwithdebinfo",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "test-vs2022-x86-debug",
+      "inherits": "test-base",
+      "configurePreset": "vs2022-x86-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "test-vs2022-x86-release",
+      "inherits": "test-base",
+      "configurePreset": "vs2022-x86-release",
+      "configuration": "Release"
+    },
+
+    {
+      "name": "test-ninja-msvc-debug",
+      "inherits": "test-base",
+      "configurePreset": "ninja-msvc-debug"
+    },
+    {
+      "name": "test-ninja-msvc-release",
+      "inherits": "test-base",
+      "configurePreset": "ninja-msvc-release"
+    },
+
+    {
+      "name": "test-linux-gcc-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-gcc-debug"
+    },
+    {
+      "name": "test-linux-gcc-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-gcc-release"
+    },
+    {
+      "name": "test-linux-clang-debug",
+      "inherits": "test-base",
+      "configurePreset": "linux-clang-debug"
+    },
+    {
+      "name": "test-linux-clang-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-clang-release"
+    },
+
+    {
+      "name": "test-macos-arm64-debug",
+      "inherits": "test-base",
+      "configurePreset": "macos-arm64-debug"
+    },
+    {
+      "name": "test-macos-arm64-release",
+      "inherits": "test-base",
+      "configurePreset": "macos-arm64-release"
+    },
+
+    {
+      "name": "test-ci-windows",
+      "inherits": "test-base",
+      "configurePreset": "ci-windows",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "test-ci-linux",
+      "inherits": "test-base",
+      "configurePreset": "ci-linux"
+    },
+    {
+      "name": "test-ci-macos",
+      "inherits": "test-base",
+      "configurePreset": "ci-macos"
+    }
+  ]
 }

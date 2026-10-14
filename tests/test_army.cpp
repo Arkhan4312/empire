@@ -1,9 +1,9 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "content/Content.h"
-#include "core/GameLogic.h"
-#include "core/GameState.h"
+#include <empire/game/content/Content.h>
+#include <empire/game/logic/GameLogic.h>
+#include <empire/game/state/GameState.h>
 
 using namespace game;
 using Catch::Approx;
