@@ -9,12 +9,16 @@ add_executable(empire_tests
 	test_offline.cpp
 	test_balance.cpp
 	test_determinism.cpp
+	test_asset_path.cpp
+	test_result.cpp
+	test_handle.cpp
 )
 
 target_link_libraries(empire_tests PRIVATE
 	empire::includes
 	empire::warnings
 	empire::engine::util
+	empire::engine::audio
 	empire::game::data
 	empire::game::state
 	empire::game::content

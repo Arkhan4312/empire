@@ -1,26 +1,32 @@
-#include <chrono>
-#include <cstdint>
-#include <cstdio>
-#include <memory>
-
 #include <empire/engine/audio/AudioSystem.h>
-#include <empire/game/content/Content.h>
-#include <empire/game/logic/GameLogic.h>
-#include <empire/game/state/GameState.h>
 #include <empire/engine/core/Input.h>
 #include <empire/engine/core/InputSystem.h>
 #include <empire/engine/log/Logger.h>
 #include <empire/engine/render/Font.h>
 #include <empire/engine/render/Renderer.h>
 #include <empire/engine/render/Window.h>
-#include <empire/game/scenes/AppContext.h>
-#include <empire/game/scenes/MainMenuScene.h>
-#include <empire/game/scenes/SceneManager.h>
 #include <empire/engine/settings/Settings.h>
 #include <empire/engine/settings/SettingsSystem.h>
 #include <empire/engine/settings/WindowMode.h>
-#include <empire/game/save/SaveSystem.h>
 #include <empire/engine/ui/UIContext.h>
+#include <empire/engine/util/AssetPath.h>
+#include <empire/game/content/Content.h>
+#include <empire/game/logic/GameLogic.h>
+#include <empire/game/save/SaveSystem.h>
+#include <empire/game/scenes/AppContext.h>
+#include <empire/game/scenes/MainMenuScene.h>
+#include <empire/game/scenes/SceneManager.h>
+#include <empire/game/state/GameState.h>
+
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <filesystem>
+#include <memory>
+
+#if defined(_WIN32)
+#include <Windows.h>
+#endif
 
 using namespace game;
 
@@ -31,22 +37,32 @@ static std::int64_t nowSeconds() {
 }
 
 int main() {
-    using namespace game::log;
+#if defined(_WIN32)
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+
+    empire::asset::setRoot(std::filesystem::path(EMPIRE_ASSETS_DIR));
+    using namespace empire::log;
     DefaultSinkFactory sinks;
-    auto logger = buildLogger(sinks, {
-                                         .consoleEnabled = true,
-                                         .consoleLevel = Level::Info,
-                                         .colorConsole = true,
-                                         .fileEnabled = true,
-                                         .fileLevel = Level::Debug,
-                                         .logFilePath = "logs/empire.log",
-                                         .truncate = false,
-                                         .format =
-                                             {
-                                                 .timestams = true,
-                                                 .sourceLocation = true,
-                                             },
-                                     });
+    LoggerConfig logCfg{
+        .consoleEnabled = true,
+        .consoleLevel = Level::Info,
+        .colorConsole = true,
+        .fileEnabled = true,
+        .fileLevel = Level::Debug,
+        .logFilePath = "logs/empire.log",
+        .truncate = false,
+        .format =
+            {
+                .timestamps = true,
+                .sourceLocation = true,
+                .channel = true,
+            },
+        .channelLevels = {},
+        .defaultChannelLevel = Level::Info,
+    };
+    auto logger = buildLogger(sinks, logCfg);
     setDefaultLogger(logger.get());
 
     GAME_LOG_INFO("Empire from Nothing v{} starting", "0.1.0");
@@ -59,9 +75,13 @@ int main() {
     Settings settings;
     settings::load(settings, kSettingsPath);
 
-    audio::AudioSystem audio;
+    for (const auto& [name, lvl] : settings.logChannelLevels) {
+        logger->setChannelLevel(name, lvl);
+    }
+
+    empire::audio::AudioSystem audio;
     if (!audio.init()) {
-        std::fprintf(stderr, "[Init] audio disabled\n");
+        GAME_LOG_INFO("Audio disabled");
     }
 
     {
@@ -100,7 +120,7 @@ int main() {
     const bool fontOk = font.loadFromFile(
         std::string(EMPIRE_ASSETS_DIR) + "/fonts/Cyrillic.ttf", 22.0f);
     if (!fontOk) {
-        std::fprintf(stderr, "[Init] font not  loaded, running without text\n");
+        std::fprintf(stderr, "[Init] font not  loaded: running without text\n");
     }
 
     ui::UIContext uiCtx;
@@ -163,9 +183,13 @@ int main() {
         }
         scenes.applyPending(ctx);
 
-        audio.setMasterVolume(settings.masterVolume);
-        audio.setSfxVolume(settings.sfxVolume);
-        audio.setMusicVolume(settings.musicVolume);
+        static std::map<std::string, float, std::less<>> lastBusVolumes;
+        if (lastBusVolumes != settings.busVolumes) {
+            for (const auto& [name, v] : settings.busVolumes) {
+                audio.setBusVolume(name, v);
+            }
+            lastBusVolumes = settings.busVolumes;
+        }
 
         static Settings appliedSnapshot = settings;
         if (appliedSnapshot.vsync != settings.vsync) {
@@ -216,6 +240,7 @@ int main() {
         uiCtx.endFrame();
         window.swapBuffers();
     }
+    settings.logChannelLevels.clear();
     settings::save(settings, kSettingsPath);
     save.save(state, kSavePath);
 

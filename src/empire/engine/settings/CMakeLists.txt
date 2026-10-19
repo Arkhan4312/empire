@@ -11,6 +11,7 @@ empire_add_module(engine_settings
 		KeyBindings.h
 	PUBLIC 	empire::includes
 		empire::engine::core
+		empire::engine::log
 	PRIVATE
 		nlohmann_json::nlohmann_json
 )

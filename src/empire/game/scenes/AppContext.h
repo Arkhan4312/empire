@@ -1,17 +1,14 @@
 #pragma once
-
+namespace empire::audio {
+class AudioSystem;
+} // namespace empire::audio
 namespace game {
-
 class GameLogic;
 class GameState;
 class InputSystem;
 class SaveSystem;
 class SceneManager;
 struct Settings;
-namespace audio {
-class AudioSystem;
-}
-
 namespace render {
 class Window;
 class Renderer;
@@ -19,7 +16,7 @@ class Font;
 }  // namespace render
 namespace ui {
 struct UIContext;
-}
+} // namespace ui
 
 struct AppContext {
     GameState& state;
@@ -31,7 +28,7 @@ struct AppContext {
     InputSystem& input;
     ui::UIContext& ui;
     SceneManager& scenes;
-    audio::AudioSystem& audio;
+    empire::audio::AudioSystem& audio;
 
     render::Font* font = nullptr;
     const char* savePath = "save.json";

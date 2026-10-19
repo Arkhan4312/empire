@@ -1,9 +1,11 @@
 #pragma once
+#include <empire/engine/core/Input.h>
+#include <empire/engine/log/LogSink.h>
+#include <empire/engine/settings/WindowMode.h>
+
+#include <map>
 #include <string>
 #include <vector>
-
-#include <empire/engine/core/Input.h>
-#include <empire/engine/settings/WindowMode.h>
 
 namespace game {
 
@@ -35,11 +37,12 @@ struct Settings {
     float brightness = 1.0f;
     // Audio
     int audioDeviceIndex = -1;
-    float masterVolume = 0.80f;
-    float sfxVolume = 1.00f;
-    float musicVolume = 0.60f;
+    std::map<std::string, float, std::less<>> busVolumes;
     // Controls
     std::vector<KeyBind> keys = defaultKeyBinds();
+    // logging
+    std::map<std::string, empire::log::Level, std::less<>> logChannelLevels;
+
     static Settings defaults() {
         return Settings{};
     }

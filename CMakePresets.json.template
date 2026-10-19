@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Kitware/CMake/master/Help/manual/presets/schema.json",
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "include": ["CMakePresets.json"],
+
+  "configurePresets": [
+    {
+      "name": "local",
+      "displayName": "Local (personal overrides)",
+      "inherits": "vs2026-x64-debug",
+      "cacheVariables": {
+        "EMPIRE_WARNINGS_AS_ERRORS": "OFF",
+        "EMPIRE_ENGINE_INSTALL": "ON"
+      }
+    },
+    {
+      "name": "local-ninja",
+      "displayName": "Local Ninja (personal overrides)",
+      "inherits": "ninja-msvc-debug",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "$env{VSINSTALLDIR}VC/Tools/MSVC/<VERSION>/bin/Hostx64/x64/cl.exe",
+        "CMAKE_CXX_COMPILER": "$env{VSINSTALLDIR}VC/Tools/MSVC/<VERSION>/bin/Hostx64/x64/cl.exe"
+      }
+    }
+  ]
+}

@@ -1,23 +1,36 @@
-#include <empire/game/scenes/SettingsScene.h>
-
-#include <algorithm>
-#include <cstdio>
-#include <memory>
-
 #include <empire/engine/audio/AudioSystem.h>
 #include <empire/engine/core/Input.h>
 #include <empire/engine/core/InputSystem.h>
 #include <empire/engine/render/Renderer.h>
 #include <empire/engine/render/Window.h>
-#include <empire/game/scenes/AppContext.h>
-#include <empire/game/scenes/MainMenuScene.h>
-#include <empire/game/scenes/SceneManager.h>
 #include <empire/engine/settings/KeyBindings.h>
 #include <empire/engine/settings/Settings.h>
 #include <empire/engine/settings/SettingsSystem.h>
 #include <empire/engine/ui/UIContext.h>
+#include <empire/game/scenes/AppContext.h>
+#include <empire/game/scenes/MainMenuScene.h>
+#include <empire/game/scenes/SceneManager.h>
+#include <empire/game/scenes/SettingsScene.h>
+
+#include <algorithm>
+#include <cstdio>
+#include <memory>
 namespace game {
 namespace {
+empire::audio::SoundId loadSfx(empire::audio::AudioSystem& audio,
+                               std::string_view name, std::string path,
+                               float vol = 1.0f, bool loop = false,
+                               std::string bus = "sfx") {
+    empire::audio::SoundDesc d;
+    d.resource.path = std::move(path);
+    d.baseVolume = vol;
+    d.loop = loop;
+    d.bus = std::move(bus);
+    // priority / maxConcurrent left at defaults (128 / 4).
+
+    auto r = audio.loadSound(name, d);
+    return r.value();
+}
 static ui::Label* addSectionHeader(ui::Container& root, const char* text) {
     auto* l = root.add<ui::Label>(text);
     l->scale = 1.05f;
@@ -28,8 +41,7 @@ static ui::Label* addSectionHeader(ui::Container& root, const char* text) {
 }  // namespace
 void SettingsScene::onEnter(AppContext& ctx) {
     const std::string base = std::string(EMPIRE_ASSETS_DIR) + "/audio/";
-    m_sfxCancel =
-        ctx.audio.loadSound("cancel", {base + "sfx/cancel.wav", 0.8f});
+    m_sfxCancel = loadSfx(ctx.audio, "cancel", base + "sfx/cancel.wav", 0.80f);
     m_uiScaleLocal = ctx.settings.uiScale;
     m_brightnessLocal = ctx.settings.brightness;
     m_pendingAudioDevice = -2;
@@ -210,19 +222,19 @@ void SettingsScene::buildUi(AppContext& ctx) {
 
     m_master = m_root.add<ui::Slider>();
     m_master->label = "Master";
-    m_master->value = &s.masterVolume;
+    //m_master->value = &s.masterVolume;
     m_master->minValue = 0.0f;
     m_master->maxValue = 1.0f;
 
     m_sfx = m_root.add<ui::Slider>();
     m_sfx->label = "SFX";
-    m_sfx->value = &s.sfxVolume;
+    //m_sfx->value = &s.sfxVolume;
     m_sfx->minValue = 0.0f;
     m_sfx->maxValue = 1.0f;
 
     m_music = m_root.add<ui::Slider>();
     m_music->label = "Music";
-    m_music->value = &s.musicVolume;
+    //m_music->value = &s.musicVolume;
     m_music->minValue = 0.0f;
     m_music->maxValue = 1.0f;
 

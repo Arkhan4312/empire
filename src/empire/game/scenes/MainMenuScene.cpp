@@ -17,8 +17,27 @@
 #include <empire/game/save/SaveSystem.h>
 #include <empire/engine/ui/UIContext.h>
 #include <empire/engine/util/Random.h>
+#include <empire/engine/log/Logger.h>
 
 namespace game {
+    namespace {
+        empire::audio::SoundId loadSfx(empire::audio::AudioSystem& audio,
+            std::string_view name,
+            std::string path,
+            float vol = 1.0f,
+            bool loop = false,
+            std::string bus = "sfx") {
+            empire::audio::SoundDesc d;
+            d.resource.path = std::move(path);
+            d.baseVolume = vol;
+            d.loop = loop;
+            d.bus = std::move(bus);
+            // priority / maxConcurrent left at defaults (128 / 4).
+
+            auto r = audio.loadSound(name, d);
+            return r.value();
+        }
+    }  // namespace
 static bool saveExists(const char* path) {
     std::ifstream f(path);
     return f.good();
@@ -26,13 +45,11 @@ static bool saveExists(const char* path) {
 
 void MainMenuScene::onEnter(AppContext& ctx) {
     const std::string base = std::string(EMPIRE_ASSETS_DIR) + "/audio/";
-    m_sfxClickOn = ctx.audio.loadSound("click_double_on",
-                                       {base + "sfx/click_double_on.wav"});
-    m_sfxClickOff = ctx.audio.loadSound("click_double_off",
-                                        {base + "sfx/click_double_off.wav"});
-    m_sfxBookClose =
-        ctx.audio.loadSound("book_close", {base + "sfx/book_close.wav"});
-    m_sfxCancel = ctx.audio.loadSound("cancel", {base + "sfx/cancel.wav"});
+
+    m_sfxClickOn = loadSfx(ctx.audio, "click_double_on", base + "sfx/click_double_on.wav");
+    m_sfxClickOff = loadSfx(ctx.audio, "click_double_off", base + "sfx/click_double_off.wav");
+    m_sfxBookClose = loadSfx(ctx.audio, "book_close", base + "sfx/book_close.wav");
+    m_sfxCancel = loadSfx(ctx.audio, "cancel", base + "sfx/cancel.wav");
 
     ctx.audio.playMusic(base + "music/main_menu(tmp).wav", 0.8f, true);
 

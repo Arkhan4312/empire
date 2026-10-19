@@ -7,11 +7,8 @@
 #include <iterator>
 #include <thread>
 
-namespace game::log {
+namespace empire::log {
 namespace {
-constexpr std::array<std::string_view, 7> kLevelNames{
-    "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRIT", "OFF",
-};
 std::string_view fileStem(std::string_view path) noexcept {
     const auto slash = path.find_last_of("/\\");
     std::string_view name =
@@ -32,21 +29,19 @@ void appendTimestamp(std::string& out) {
                         .count() %
                     1000;
     std::tm tmv{};
+#if defined(_WIN32)
     localtime_s(&tmv, &secs);
+#else
+    localtime_r(&secs, &tmv);
+#endif
+
     std::format_to(std::back_inserter(out), "{:02}:{:02}:{:02}.{:03}",
                    tmv.tm_hour, tmv.tm_min, tmv.tm_sec, static_cast<int>(ms));
 }
 // plain POD
-Logger* g_defaultLogger = nullptr;
+std::atomic<Logger*> g_defaultLogger{nullptr};
 }  // namespace
 
-const char* levelName(Level lvl) noexcept {
-    const int idx = static_cast<int>(lvl);
-    if (idx < 0 || idx >= static_cast<int>(kLevelNames.size())) {
-        return "?";
-    }
-    return kLevelNames[static_cast<std::size_t>(idx)].data();
-}
 Logger::Logger(std::unique_ptr<ILogSink> sink, LoggerFormat fmt)
     : m_sink(std::shared_ptr<ILogSink>{std::move(sink)}), m_format(fmt) {
 }
@@ -69,12 +64,39 @@ void Logger::flush() noexcept {
     sink->flush();
 }
 
-std::string Logger::formatPrefix(Level lvl,
+void Logger::registerChannel(Channel ch, Level minLevel) {
+    if (ch.empty()) {
+        return;
+    }
+    auto it = m_channelLevels.find(ch);
+    if (it != m_channelLevels.end()) {
+        return;
+    }
+    m_channelLevels.emplace(std::string(ch), minLevel);
+}
+
+void Logger::setChannelLevel(Channel ch, Level minLevel) {
+    if (ch.empty()) {
+        return;
+    }
+    m_channelLevels.insert_or_assign(std::string(ch), minLevel);
+}
+
+Level Logger::channelLevel(Channel ch) const noexcept {
+    auto it = m_channelLevels.find(ch);
+    return it == m_channelLevels.end() ? m_defaultChannelLevel : it->second;
+}
+
+bool Logger::isChannelEnabled(Channel ch, Level lvl) const noexcept {
+    return lvl >= channelLevel(ch);
+}
+
+std::string Logger::formatPrefix(Channel ch, Level lvl,
                                  const std::source_location& loc) const {
     std::string line;
-    line.reserve(96);
+    line.reserve(128);
 
-    if (m_format.timestams) {
+    if (m_format.timestamps) {
         line += '[';
         appendTimestamp(line);
         line += "] ";
@@ -88,13 +110,15 @@ std::string Logger::formatPrefix(Level lvl,
     }
 
     int idx = static_cast<int>(lvl);
-    if (idx < 0 || idx >= static_cast<int>(kLevelNames.size())) {
-        idx = 0;
-    }
+    const char* lvlName = (idx >= 0 && idx < 7) ? levelName(lvl) : "?";
     line += '[';
-    line += kLevelNames[static_cast<std::size_t>(idx)];
+    line += lvlName;
     line += ']';
-
+    if (m_format.channel && !ch.empty()) {
+        line += '[';
+        line += ch;
+        line += ']';
+    }
     if (m_format.sourceLocation) {
         line += '[';
         line += fileStem(loc.file_name());
@@ -134,14 +158,20 @@ std::unique_ptr<Logger> buildLogger(ISinkFactory& factory,
     } else {
         sink = factory.makeComposite(std::move(children));
     }
-    return std::make_unique<Logger>(std::move(sink), cfg.format);
+
+    auto logger = std::make_unique<Logger>(std::move(sink), cfg.format);
+    logger->setDefaultChannelLevel(cfg.defaultChannelLevel);
+    for (const auto& [name, lvl] : cfg.channelLevels) {
+        logger->setChannelLevel(name, lvl);
+    }
+    return logger;
 }
 
 Logger* defaultLogger() noexcept {
-    return g_defaultLogger;
+    return g_defaultLogger.load(std::memory_order_acquire);
 }
 
 void setDefaultLogger(Logger* logger) noexcept {
-    g_defaultLogger = logger;
+    g_defaultLogger.store(logger, std::memory_order_release);
 }
-}  // namespace game::log
+}  // namespace empire::log

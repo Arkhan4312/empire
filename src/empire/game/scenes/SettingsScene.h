@@ -47,7 +47,7 @@ private:
     float m_brightnessLocal = 1.0f;
 
     int m_pendingAudioDevice = -2;
-    audio::SoundId m_sfxCancel = audio::kInvalidSound;
+    empire::audio::SoundId m_sfxCancel = empire::audio::kInvalidSound;
 
     bool m_needsRebuild = false;
     std::vector<std::string> m_monitorNames;

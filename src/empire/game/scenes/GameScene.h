@@ -58,15 +58,15 @@ private:
     std::vector<FloatingText> m_floaters;
     std::vector<Notification> m_notifications;
 
-    audio::SoundId m_sfxPop1 = audio::kInvalidSound;
-    audio::SoundId m_sfxPop2 = audio::kInvalidSound;
-    audio::SoundId m_sfxPop3 = audio::kInvalidSound;
-    audio::SoundId m_sfxPop4 = audio::kInvalidSound;
-    audio::SoundId m_sfxItemEquip = audio::kInvalidSound;
-    audio::SoundId m_sfxCancel = audio::kInvalidSound;
-    audio::SoundId m_sfxBookClose = audio::kInvalidSound;
-    audio::SoundId m_sfxWhoosh = audio::kInvalidSound;
-    audio::SoundId m_sfxClickOff = audio::kInvalidSound;
-    audio::SoundId m_sfxClickOn = audio::kInvalidSound;
+    empire::audio::SoundId m_sfxPop1 = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxPop2 = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxPop3 = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxPop4 = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxItemEquip = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxCancel = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxBookClose = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxWhoosh = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxClickOff = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxClickOn = empire::audio::kInvalidSound;
 };
 }  // namespace game

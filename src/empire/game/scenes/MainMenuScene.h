@@ -26,9 +26,9 @@ private:
     ui::Button* m_settings = nullptr;
     ui::Button* m_quit = nullptr;
 
-    audio::SoundId m_sfxClickOn = audio::kInvalidSound;
-    audio::SoundId m_sfxClickOff = audio::kInvalidSound;
-    audio::SoundId m_sfxBookClose = audio::kInvalidSound;
-    audio::SoundId m_sfxCancel = audio::kInvalidSound;
+    empire::audio::SoundId m_sfxClickOn = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxClickOff = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxBookClose = empire::audio::kInvalidSound;
+    empire::audio::SoundId m_sfxCancel = empire::audio::kInvalidSound;
 };
 }  // namespace game

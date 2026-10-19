@@ -1,12 +1,12 @@
 
+#include <empire/engine/settings/Settings.h>
+#include <empire/engine/settings/SettingsSystem.h>
+
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <system_error>
-
-#include <empire/engine/settings/SettingsSystem.h>
-#include <empire/engine/settings/Settings.h>
 
 namespace game::settings {
 using nlohmann::json;
@@ -35,6 +35,16 @@ std::string readString(const json& o, const char* k, const std::string& fb) {
         return fb;
     }
     return o[k].get<std::string>();
+}
+void writeLevelToJson(json& j, empire::log::Level lvl) {
+    j = empire::log::levelName(lvl);
+}
+
+std::optional<empire::log::Level> readLevelFromJson(const json& j) {
+    if (!j.is_string()) {
+        return std::nullopt;
+    }
+    return empire::log::ParseLevel(j.get<std::string>());
 }
 }  // namespace
 
@@ -73,9 +83,33 @@ bool load(Settings& s, const std::string& path) {
     if (auto it = j.find("audio"); it != j.end() && it->is_object()) {
         s.audioDeviceIndex =
             readInt(*it, "audioDeviceIndex", s.audioDeviceIndex);
-        s.masterVolume = readFloat(*it, "masterVolume", s.masterVolume);
-        s.sfxVolume = readFloat(*it, "sfxVolume", s.sfxVolume);
-        s.musicVolume = readFloat(*it, "musicVolume", s.musicVolume);
+        auto seed = [&](const char* k, const char* busName) {
+            if (it->contains(k) && (*it)[k].is_number()) {
+                if (s.busVolumes.find(busName) == s.busVolumes.end()) {
+                    s.busVolumes[busName] = readFloat(*it, k, 0.0f);
+                }
+            }
+        };
+        seed("masterVolume", "master");
+        seed("sfxVolume", "sfx");
+        seed("musicVolume", "music");
+
+        // New format: nested "buses" object.
+        if (auto b = it->find("buses"); b != it->end() && b->is_object()) {
+            for (auto& [name, val] : b->items()) {
+                if (!val.is_number()) {
+                    continue;
+                }
+                float v = val.get<float>();
+                if (v < 0.0f) {
+                    v = 0.0f;
+                }
+                if (v > 1.0f) {
+                    v = 1.0f;
+                }
+                s.busVolumes[name] = v;
+            }
+        }
     }
 
     // Controls
@@ -101,7 +135,17 @@ bool load(Settings& s, const std::string& path) {
             }
         }
     }
-
+    if (auto it = j.find("logging"); it != j.end() && it->is_object()) {
+        if (auto ch = it->find("channels");
+            ch != it->end() && ch->is_object()) {
+            s.logChannelLevels.clear();
+            for (auto& [key, val] : ch->items()) {
+                if (auto lvl = readLevelFromJson(val)) {
+                    s.logChannelLevels.emplace(key, *lvl);
+                }
+            }
+        }
+    }
     // Clamp
     if (s.uiScale < 0.75f) {
         s.uiScale = 0.75f;
@@ -124,24 +168,7 @@ bool load(Settings& s, const std::string& path) {
     if (s.monitorIndex < 0) {
         s.monitorIndex = 0;
     }
-    if (s.masterVolume < 0.0f) {
-        s.masterVolume = 0.0f;
-    }
-    if (s.masterVolume > 1.0f) {
-        s.masterVolume = 1.0f;
-    }
-    if (s.sfxVolume < 0.0f) {
-        s.sfxVolume = 0.0f;
-    }
-    if (s.sfxVolume > 1.0f) {
-        s.sfxVolume = 1.0f;
-    }
-    if (s.musicVolume < 0.0f) {
-        s.musicVolume = 0.0f;
-    }
-    if (s.musicVolume > 1.0f) {
-        s.musicVolume = 1.0f;
-    }
+
     return true;
 }
 bool save(const Settings& s, const std::string& path) {
@@ -160,10 +187,12 @@ bool save(const Settings& s, const std::string& path) {
     j["graphics"] = std::move(g);
 
     json a;
-    a["deviceIndex"] = s.audioDeviceIndex;
-    a["masterVolume"] = s.masterVolume;
-    a["sfxVolume"] = s.sfxVolume;
-    a["musicVolume"] = s.musicVolume;
+    a["audioDeviceIndex"] = s.audioDeviceIndex;
+    json busObj = json::object();
+    for (const auto& [name, v] : s.busVolumes) {
+        busObj[name] = v;
+    }
+    a["buses"] = std::move(busObj);
     j["audio"] = std::move(a);
 
     json keys = json::array();
@@ -173,6 +202,13 @@ bool save(const Settings& s, const std::string& path) {
                         {"default", kb.defaultKey}});
     }
     j["controls"] = {{"keys", std::move(keys)}};
+
+    json logging;
+    logging["channels"] = json::object();
+    for (const auto& [name, lvl] : s.logChannelLevels) {
+        logging["channels"][name] = empire::log::levelName(lvl);
+    }
+    j["logging"] = std::move(logging);
 
     const std::string tmp = path + ".tmp";
     {

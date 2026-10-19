@@ -19,27 +19,37 @@
 #include <empire/engine/util/Random.h>
 
 namespace game {
+    namespace {
+        empire::audio::SoundId loadSfx(empire::audio::AudioSystem& audio,
+            std::string_view name,
+            std::string path,
+            float vol = 1.0f,
+            bool loop = false,
+            std::string bus = "sfx") {
+            empire::audio::SoundDesc d;
+            d.resource.path = std::move(path);
+            d.baseVolume = vol;
+            d.loop = loop;
+            d.bus = std::move(bus);
+            // priority / maxConcurrent left at defaults (128 / 4).
 
+            auto r = audio.loadSound(name, d);
+            return r.value();
+        }
+    }  // namespace
 void GameScene::onEnter(AppContext& ctx) {
     const std::string base = std::string(EMPIRE_ASSETS_DIR) + "/audio/";
 
-    m_sfxPop1 = ctx.audio.loadSound("pop_1", {base + "sfx/pop_1.wav", 0.85f});
-    m_sfxPop2 = ctx.audio.loadSound("pop_2", {base + "sfx/pop_2.wav", 0.85f});
-    m_sfxPop3 = ctx.audio.loadSound("pop_3", {base + "sfx/pop_3.wav", 0.85f});
-    m_sfxPop4 = ctx.audio.loadSound("pop_4", {base + "sfx/pop_4.wav", 0.85f});
-
-    m_sfxItemEquip =
-        ctx.audio.loadSound("item_equip", {base + "sfx/item_equip.wav", 0.8f});
-    m_sfxCancel =
-        ctx.audio.loadSound("cancel", {base + "sfx/cancel.wav", 0.8f});
-    m_sfxBookClose =
-        ctx.audio.loadSound("book_close", {base + "sfx/book_close.wav", 0.8f});
-    m_sfxWhoosh =
-        ctx.audio.loadSound("whoosh_1", {base + "sfx/whoosh_1.wav", 0.9f});
-    m_sfxClickOff = ctx.audio.loadSound("click_double_off",
-                                        {base + "sfx/click_double_off.wav"});
-    m_sfxClickOn = ctx.audio.loadSound("click_double_on",
-                                       {base + "sfx/click_double_on.wav"});
+    m_sfxPop1 = loadSfx(ctx.audio, "pop_1", base + "sfx/pop_1.wav", 0.85f);
+    m_sfxPop2 = loadSfx(ctx.audio, "pop_2", base + "sfx/pop_2.wav", 0.85f);
+    m_sfxPop3 = loadSfx(ctx.audio, "pop_3", base + "sfx/pop_3.wav", 0.85f);
+    m_sfxPop4 = loadSfx(ctx.audio, "pop_4", base + "sfx/pop_4.wav", 0.85f);
+    m_sfxItemEquip = loadSfx(ctx.audio, "item_equip", base + "sfx/item_equip.wav", 0.80f);
+    m_sfxCancel = loadSfx(ctx.audio, "cancel", base + "sfx/cancel.wav", 0.80f);
+    m_sfxBookClose = loadSfx(ctx.audio, "book_close", base + "sfx/book_close.wav", 0.80f);
+    m_sfxWhoosh = loadSfx(ctx.audio, "whoosh_1", base + "sfx/whoosh_1.wav", 0.90f);
+    m_sfxClickOff = loadSfx(ctx.audio, "click_double_off", base + "sfx/click_double_off.wav");
+    m_sfxClickOn = loadSfx(ctx.audio, "click_double_on", base + "sfx/click_double_on.wav");
 
     ctx.audio.playMusic(base + "music/game_loop(tmp).wav", 0.8f, /*loop*/ true);
     buildUi(ctx);

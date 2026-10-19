@@ -16,8 +16,12 @@
 #define GAME_LOG_FILEN0 fileno
 #endif
 
-namespace game::log {
+namespace empire::log {
 namespace {
+
+constexpr std::array<std::string_view, 7> kLevelNames{
+    "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRIT", "OFF",
+};
 constexpr std::array<std::string_view, 7> kLevelColors{
     "\x1b[90m",       // Trace
     "\x1b[36m",       // Debug
@@ -37,6 +41,41 @@ bool stdoutIsTty() noexcept {
 
 // ConsoleSink
 
+const char* levelName(Level lvl) noexcept {
+    const int idx = static_cast<int>(lvl);
+    if (idx < 0 || idx >= static_cast<int>(kLevelNames.size())) {
+        return "?";
+    }
+    return kLevelNames[static_cast<std::size_t>(idx)].data();
+}
+
+std::optional<Level> ParseLevel(std::string_view name) noexcept {
+    auto eqIgnoreCase = [](std::string_view a, std::string_view b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (std::size_t i = 0; i < a.size(); ++i) {
+            char ca = a[i];
+            char cb = b[i];
+            if (ca >= 'a' && ca <= 'z') {
+                ca = static_cast<char>(ca - 32);
+            }
+            if (cb >= 'a' && cb <= 'z') {
+                cb = static_cast<char>(cb - 32);
+            }
+            if (ca != cb) {
+                return false;
+            }
+        }
+        return true;
+    };
+    for (std::size_t i = 0; i < kLevelNames.size(); ++i) {
+        if (eqIgnoreCase(name, kLevelNames[i])) {
+            return static_cast<Level>(i);
+        }
+    }
+    return std::nullopt;
+}
 ConsoleSink::ConsoleSink(ConsoleSinkConfig cfg) noexcept
     : m_minLevel(cfg.minLevel), m_color(cfg.color && stdoutIsTty()) {
 }
@@ -157,4 +196,4 @@ std::unique_ptr<ILogSink> DefaultSinkFactory::makeComposite(
     return std::make_unique<CompositeSink>(std::move(children));
 }
 
-}  // namespace game::log
+}  // namespace empire::log

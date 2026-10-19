@@ -2,11 +2,12 @@
 
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace game::log {
+namespace empire::log {
 
 enum class Level : int {
     Trace = 0,
@@ -18,6 +19,7 @@ enum class Level : int {
     Off = 6,
 };
 const char* levelName(Level lvl) noexcept;
+std::optional<Level> ParseLevel(std::string_view name) noexcept;
 
 class ILogSink {
 public:
@@ -120,4 +122,4 @@ public:
     std::unique_ptr<ILogSink> makeComposite(
         std::vector<std::unique_ptr<ILogSink>>) override;
 };
-}  // namespace game::log
+}  // namespace empire::log
