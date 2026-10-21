@@ -7,6 +7,7 @@
 #include <empire/engine/audio/AudioSpatial.h>
 #include <empire/engine/audio/AudioVoice.h>
 #include <empire/engine/audio/AudioVoicePool.h>
+#include <empire/engine/core/events/EventBus.h>
 #include <empire/engine/util/Handle.h>
 #include <empire/engine/util/Result.h>
 
@@ -30,6 +31,17 @@ struct SoundDesc {
     std::string bus = "sfx";
     std::uint8_t priority = 128;
     std::uint8_t maxConcurrent = 4;
+};
+
+struct SoundReadyEvent : public events::Event {
+    SoundId id{};
+    AudioResult<void> result;
+
+    SoundReadyEvent() = delete;
+
+    SoundReadyEvent(SoundId i, AudioResult<void> r)
+        : Event(events::EventCategory::Audio), id(i), result(std::move(r)) {
+    }
 };
 
 struct AudioStats {
@@ -74,7 +86,7 @@ public:
     bool init();
     void shutdown();
     bool ready() const noexcept;
-
+    void setEventBus(events::EventBus* bus) noexcept;
     // Call once per frame from the main thread. Drives device polling,
     // migration fade state machine, voice pool cleanup, music fades, async
     // completions, and (when enabled) hot-reload scanning.
@@ -131,18 +143,6 @@ public:
 
     void setListener3D(const Listener3D& l);
     const Listener3D& listener3D() const noexcept;
-
-    // ---- Callbacks ----
-
-    using VoiceFinishedCallback = AudioVoicePool::FinishedCallback;
-    void setVoiceFinishedCallback(VoiceFinishedCallback fn);
-
-    // Fired on the main thread from update() when an async load completes.
-    // Result: ok on success, error on failure (DecodeFailed, FileNotFound,
-    // ...).
-    using SoundReadyCallback =
-        std::function<void(SoundId id, AudioResult<void> result)>;
-    void setSoundReadyCallback(SoundReadyCallback fn);
 
     // ---- Music ----
 
@@ -209,13 +209,7 @@ public:
 
     const std::vector<AudioDeviceInfo>& listOutputDevices() const noexcept;
     int currentOutputDevice() const noexcept;
-
-    // Async: returns true if the request was accepted. Completion arrives via
-    // AudioDeviceManager::MigrationCallback. Poll isMigrating() or observe
-    // migrationGain() to track the fade.
     bool setOutputDevice(int index);
-
-    // Migration tuning (advanced).
     AudioDeviceManager& devices() noexcept;
     const AudioDeviceManager& devices() const noexcept;
 

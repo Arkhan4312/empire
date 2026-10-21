@@ -36,3 +36,4 @@
 .git/out/*
 /out/build/
 /Текстовый документ.txt
+/CMakePresets.json.template

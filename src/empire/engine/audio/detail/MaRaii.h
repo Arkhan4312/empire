@@ -2,7 +2,7 @@
 
 #include <empire/engine/audio/AudioError.h>
 #include <empire/engine/audio/detail/MiniAudio.h>
-
+#include <memory>
 namespace empire::audio::detail {
 
 // ma_log
@@ -12,7 +12,7 @@ public:
     ~MaLog();
     MaLog(const MaLog&) = delete;
     MaLog& operator=(const MaLog&) = delete;
-    MaLog(MaLog&&) noexcept;
+    MaLog(MaLog&&) noexcept = default;
     MaLog& operator=(MaLog&&) noexcept;
 
     AudioResult<void> init();
@@ -23,8 +23,7 @@ public:
     const ma_log* get() const noexcept;
 
 private:
-    ma_log m_log{};
-    bool m_valid = false;
+    std::unique_ptr<ma_log> m_log;
 };
 
 // ma_context
@@ -34,7 +33,7 @@ public:
     ~MaContext();
     MaContext(const MaContext&) = delete;
     MaContext& operator=(const MaContext&) = delete;
-    MaContext(MaContext&&) noexcept;
+    MaContext(MaContext&&) noexcept = default;
     MaContext& operator=(MaContext&&) noexcept;
 
     AudioResult<void> init(ma_backend* backends, ma_uint32 backendCount,
@@ -46,8 +45,7 @@ public:
     const ma_context* get() const noexcept;
 
 private:
-    ma_context m_ctx{};
-    bool m_valid = false;
+    std::unique_ptr<ma_context> m_ctx;
 };
 
 // ma_resource_manager
@@ -57,7 +55,7 @@ public:
     ~MaResourceManager();
     MaResourceManager(const MaResourceManager&) = delete;
     MaResourceManager& operator=(const MaResourceManager&) = delete;
-    MaResourceManager(MaResourceManager&&) noexcept;
+    MaResourceManager(MaResourceManager&&) noexcept = default;
     MaResourceManager& operator=(MaResourceManager&&) noexcept;
     AudioResult<void> init(const ma_resource_manager_config* cfg);
     void uninit() noexcept;
@@ -67,8 +65,7 @@ public:
     const ma_resource_manager* get() const noexcept;
 
 private:
-    ma_resource_manager m_rm{};
-    bool m_valid = false;
+    std::unique_ptr<ma_resource_manager> m_rm;
 };
 
 // ma_engine
@@ -79,7 +76,7 @@ public:
     ~MaEngine();
     MaEngine(const MaEngine&) = delete;
     MaEngine& operator=(const MaEngine&) = delete;
-    MaEngine(MaEngine&&) noexcept;
+    MaEngine(MaEngine&&) noexcept = default;
     MaEngine& operator=(MaEngine&&) noexcept;
 
     AudioResult<void> init(const ma_engine_config* cfg);
@@ -90,8 +87,7 @@ public:
     const ma_engine* get() const noexcept;
 
 private:
-    ma_engine m_engine{};
-    bool m_valid = false;
+    std::unique_ptr<ma_engine> m_engine{};
 };
 
 // ma_sound_group
@@ -101,7 +97,7 @@ public:
     ~MaSoundGroup();
     MaSoundGroup(const MaSoundGroup&) = delete;
     MaSoundGroup& operator=(const MaSoundGroup&) = delete;
-    MaSoundGroup(MaSoundGroup&&) noexcept;
+    MaSoundGroup(MaSoundGroup&&) noexcept = default;
     MaSoundGroup& operator=(MaSoundGroup&&) noexcept;
 
     AudioResult<void> init(ma_engine* engine, ma_uint32 flags,
@@ -113,8 +109,7 @@ public:
     const ma_sound_group* get() const noexcept;
 
 private:
-    ma_sound_group m_group{};
-    bool m_valid = false;
+    std::unique_ptr<ma_sound_group> m_group;
 };
 
 // ma_sound
@@ -124,7 +119,7 @@ public:
     ~MaSound();
     MaSound(const MaSound&) = delete;
     MaSound& operator=(const MaSound&) = delete;
-    MaSound(MaSound&&) noexcept;
+    MaSound(MaSound&&) noexcept = default;
     MaSound& operator=(MaSound&&) noexcept;
 
     AudioResult<void> initFromFile(ma_engine* engine, const char* path,
@@ -145,8 +140,7 @@ public:
     const ma_sound* get() const noexcept;
 
 private:
-    ma_sound m_sound{};
-    bool m_valid = false;
+    std::unique_ptr<ma_sound> m_sound;
 };
 
 // ma_audio_buffer
@@ -156,7 +150,7 @@ public:
     ~MaAudioBuffer();
     MaAudioBuffer(const MaAudioBuffer&) = delete;
     MaAudioBuffer& operator=(const MaAudioBuffer&) = delete;
-    MaAudioBuffer(MaAudioBuffer&&) noexcept;
+    MaAudioBuffer(MaAudioBuffer&&) noexcept = default;
     MaAudioBuffer& operator=(MaAudioBuffer&&) noexcept;
 
     AudioResult<void> init(const ma_audio_buffer_config* cfg);
@@ -167,8 +161,7 @@ public:
     const ma_audio_buffer* get() const noexcept;
 
 private:
-    ma_audio_buffer m_buffer{};
-    bool m_valid = false;
+    std::unique_ptr<ma_audio_buffer> m_buffer{};
 };
 
 // ma_decoder
@@ -178,7 +171,7 @@ public:
     ~MaDecoder();
     MaDecoder(const MaDecoder&) = delete;
     MaDecoder& operator=(const MaDecoder&) = delete;
-    MaDecoder(MaDecoder&&) noexcept;
+    MaDecoder(MaDecoder&&) noexcept = default;
     MaDecoder& operator=(MaDecoder&&) noexcept;
 
     AudioResult<void> initFromFile(const char* path,
@@ -195,8 +188,7 @@ public:
     const ma_decoder* get() const noexcept;
 
 private:
-    ma_decoder m_decoder{};
-    bool m_valid = false;
+    std::unique_ptr<ma_decoder> m_decoder;
 };
 
 }  // namespace empire::audio::detail

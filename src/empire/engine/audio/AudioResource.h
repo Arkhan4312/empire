@@ -94,9 +94,10 @@ public:
         return m_pcm.empty() ? nullptr : m_pcm.data();
     }
 
-    // Streamde-only: absolute path, safe to pass to ma_sound_init_from_file
+    // Streamed-only: absolute path, safe to pass to ma_sound_init_from_file
     const char* streamPath() const noexcept {
-        return m_resolvedPath.empty() ? nullptr : m_resolvedPath.c_str();
+        return (m_streamed && !m_resolvedPath.empty()) ? m_resolvedPath.c_str()
+                                                       : nullptr;
     }
 
 private:

@@ -2,7 +2,7 @@
 
 #include <empire/engine/audio/AudioError.h>
 #include <empire/engine/audio/detail/MiniAudio.h>
-
+#include <memory>
 namespace empire::audio::detail {
 
 // RAII around ma_audio_buffer_ref. Does not own the PCM data. The caller must
@@ -15,7 +15,7 @@ public:
 
     MaAudioBufferRef(const MaAudioBufferRef&) = delete;
     MaAudioBufferRef& operator=(const MaAudioBufferRef&) = delete;
-    MaAudioBufferRef(MaAudioBufferRef&&) noexcept;
+    MaAudioBufferRef(MaAudioBufferRef&&) noexcept = default;
     MaAudioBufferRef& operator=(MaAudioBufferRef&&) noexcept;
 
     AudioResult<void> init(ma_format format, ma_uint32 channels,
@@ -23,23 +23,22 @@ public:
     void uninit() noexcept;
 
     bool isValid() const noexcept {
-        return m_valid;
+        return m_ref != nullptr;
     }
     ma_audio_buffer_ref* get() noexcept {
-        return m_valid ? &m_ref : nullptr;
+        return m_ref.get();
     }
     const ma_audio_buffer_ref* get() const noexcept {
-        return m_valid ? &m_ref : nullptr;
+        return m_ref.get();
     }
 
     // ma_audio_buffer_ref is a ma_data source (its first member is
     // ma_data_source_base).
     ma_data_source* dataSource() noexcept {
-        return m_valid ? reinterpret_cast<ma_data_source*>(&m_ref) : nullptr;
+        return m_ref ? reinterpret_cast<ma_data_source*>(m_ref.get()) : nullptr;
     }
 
 private:
-    ma_audio_buffer_ref m_ref{};
-    bool m_valid = false;
+    std::unique_ptr<ma_audio_buffer_ref> m_ref;
 };
 }  // namespace empire::audio::detail

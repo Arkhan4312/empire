@@ -7,6 +7,7 @@
 #include <empire/engine/audio/AudioVoice.h>
 #include <empire/engine/audio/detail/MaAudioBufferRef.h>
 #include <empire/engine/audio/detail/MaRaii.h>
+#include <empire/engine/core/events/EventBus.h>
 
 #include <array>
 #include <atomic>
@@ -101,18 +102,20 @@ public:
     const Listener2D& listener2D() const noexcept {
         return m_listener2D;
     }
-    // Callback for voice endings. Invoked from the main thread.
-    using FinishedCallback = std::function<void(const VoiceFinishEvent&)>;
-    void setFinishedCallback(FinishedCallback fn);
-
-    float computePan2D(const Spatial2D& src) const noexcept;
     void setEventLog(AudioEventLog* log) noexcept {
         m_events = log;
     }
+    void setEventBus(events::EventBus* bus) noexcept {
+        m_eventBus = bus;
+    }
+
+    float computePan2D(const Spatial2D& src) const noexcept;
+
     void updatePosition(VoiceHandle h, const Spatial3D& spatial);
 
 private:
     AudioEventLog* m_events = nullptr;
+    events::EventBus* m_eventBus = nullptr;
 
     enum class SlotState : std::uint8_t {
         Free,
@@ -165,7 +168,6 @@ private:
     std::uint64_t m_tickCounter = 0;
     Listener2D m_listener2D{};
 
-    FinishedCallback m_finished;
     std::vector<VoiceFinishEvent> m_pendingEvents;
 };
 }  // namespace empire::audio

@@ -41,7 +41,9 @@ template <typename Tag, typename Value>
 class HandleTable {
 public:
     using HandleType = Handle<Tag>;
-
+    HandleTable() {
+        m_slots.emplace_back();
+    }
     HandleType insert(Value value) {
         if (!m_free.empty()) {
             const std::uint32_t idx = m_free.back();
@@ -101,6 +103,7 @@ public:
 
     void clear() noexcept {
         m_slots.clear();
+        m_slots.emplace_back();
         m_free.clear();
         m_live = 0;
     }

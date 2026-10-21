@@ -38,8 +38,8 @@ constexpr float kHotReloadPollInterval = 1.0f;
 // Impl
 struct AudioSystem::Impl {
     AudioEventLog eventLog;
+    events::EventBus* eventBus = nullptr;
     std::unordered_map<std::string, std::vector<SoundId>> pendingByPath;
-    AudioSystem::SoundReadyCallback soundReadyCb;
 
     AudioDeviceManager device;
     AudioResourceCache resourceCache;
@@ -287,6 +287,16 @@ AudioSystem::~AudioSystem() {
     shutdown();
 }
 
+void AudioSystem::setEventBus(events::EventBus* bus) noexcept {
+    if (!m_impl) {
+        return;
+    }
+    m_impl->eventBus = bus;
+    m_impl->voices.setEventBus(bus);
+    m_impl->device.setEventBus(bus);
+    m_impl->musicPlayer.setEventBus(bus);
+}
+
 bool AudioSystem::init() {
     if (!m_impl) {
         return false;
@@ -301,10 +311,17 @@ bool AudioSystem::init() {
                           describe(r.error()));
         return false;
     }
+    if (!m_impl->eventBus) {
+        m_impl->eventBus = events::defaultEventBus();
+    }
+    m_impl->voices.setEventBus(m_impl->eventBus);
+    m_impl->device.setEventBus(m_impl->eventBus);
+    m_impl->musicPlayer.setEventBus(m_impl->eventBus);
 
     m_impl->voices.setEventLog(&m_impl->eventLog);
     m_impl->device.setEventLog(&m_impl->eventLog);
     m_impl->musicPlayer.setEventLog(&m_impl->eventLog);
+
     m_impl->musicPlayer.init(m_impl->device, m_impl->buses);
     m_impl->device.setMigrationFadeDurations(0.3f, 0.2f);
     m_impl->device.setRetryBackoff(1.0f, 30.0f);
@@ -312,15 +329,6 @@ bool AudioSystem::init() {
         [this]() { m_impl->teardownEngineDependents(); });
     m_impl->device.setAfterMigration(
         [this]() { m_impl->rebuildEngineDependents(); });
-
-    m_impl->device.setMigrationCallback([](const MigrationEvent& ev) {
-        // extra hook point
-        if (!ev.success) {
-            GAME_LOG_CH_WARN(channels::kDevice,
-                             "miigration callback: failed (reason={}, old={}",
-                             static_cast<int>(ev.reason), ev.oldDevice);
-        }
-    });
 
     const auto rd = m_impl->device.init();
     if (!rd.isOk()) {
@@ -558,12 +566,6 @@ bool AudioSystem::isVoicePlaying(VoiceHandle h) const noexcept {
     return m_impl && m_impl->voices.isPlaying(h);
 }
 
-void AudioSystem::setVoiceFinishedCallback(VoiceFinishedCallback fn) {
-    if (m_impl) {
-        m_impl->voices.setFinishedCallback(std::move(fn));
-    }
-}
-
 std::size_t AudioSystem::activeVoiceCount() const noexcept {
     return m_impl ? m_impl->voices.activeCount() : 0;
 }
@@ -683,12 +685,14 @@ void AudioSystem::update(float dt) {
             I.eventLog.push(AudioEventKind::ResourceLoadFailed, result.error(),
                             AudioEventLog::hashStr(c.logicalPath));
         }
-        if (I.soundReadyCb) {
+        events::EventBus* bus =
+            I.eventBus ? I.eventBus : events::defaultEventBus();
+        if (bus) {
             for (SoundId id : waiters) {
                 if (!I.soundRegistry.isValid(id)) {
                     continue;
                 }
-                I.soundReadyCb(id, result);
+                bus->emplaceDeferred<SoundReadyEvent>(id, result);
             }
         }
     }
@@ -876,10 +880,6 @@ std::string_view AudioSystem::soundName(SoundId id) const noexcept {
 
 void AudioSystem::updateSoundPosition(VoiceHandle h, const Spatial3D& spatial) {
     if (m_impl) m_impl->voices.updatePosition(h, spatial);
-}
-
-void AudioSystem::setSoundReadyCallback(SoundReadyCallback fn) {
-    if (m_impl) m_impl->soundReadyCb = std::move(fn);
 }
 
 AudioMusicPlayer& AudioSystem::music() noexcept {

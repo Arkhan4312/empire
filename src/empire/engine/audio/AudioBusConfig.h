@@ -31,7 +31,7 @@ constexpr bool validateDefaultBuses() noexcept {
         }
         if (!kDefaultBuses[i].parent.empty()) {
             bool parentBefore = false;
-            for (std::size_t j = 0; j < i; ++i) {
+            for (std::size_t j = 0; j < i; ++j) {
                 if (kDefaultBuses[j].name == kDefaultBuses[i].parent) {
                     parentBefore = true;
                     break;

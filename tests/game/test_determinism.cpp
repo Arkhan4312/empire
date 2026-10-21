@@ -1,10 +1,12 @@
-#include <catch2/catch_approx.hpp>
-#include <catch2/catch_test_macros.hpp>
-
+#include <empire/engine/util/Random.h>
 #include <empire/game/content/Content.h>
 #include <empire/game/logic/GameLogic.h>
 #include <empire/game/state/GameState.h>
-#include <empire/engine/util/Random.h>
+
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+
+#include "test_helpers.h"
 
 using namespace game;
 
@@ -35,8 +37,8 @@ TEST_CASE("Determinism: identical inputs -> identical state", "[determinism]") {
     const auto s1 = run();
     const auto s2 = run();
 
-    REQUIRE(s1.resources.get(ResourceType::PLASTIC) ==
-            Catch::Approx(s2.resources.get(ResourceType::PLASTIC)));
+    REQUIRE(s1.resources.get(test::plastic()) ==
+            Catch::Approx(s2.resources.get(test::plastic())));
     REQUIRE(s1.unitCount("soldier_crooked") == s2.unitCount("soldier_crooked"));
     REQUIRE(s1.bossIndex == s2.bossIndex);
     REQUIRE(s1.currentBoss.hp == Catch::Approx(s2.currentBoss.hp));

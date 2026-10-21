@@ -3,7 +3,8 @@
 #include <empire/engine/audio/AudioError.h>
 #include <empire/engine/audio/AudioEventLog.h>
 #include <empire/engine/audio/detail/MiniAudio.h>
-
+#include <empire/engine/core/events/Event.h>
+#include <empire/engine/core/events/EventBus.h>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -14,6 +15,15 @@ namespace empire::audio {
 
 class AudioDeviceManager;
 class AudioBusRegistry;
+
+struct MusicTrackEndedEvent : public events::Event {
+    std::string path;
+    MusicTrackEndedEvent() : Event(events::EventCategory::Audio) {
+    }
+    explicit MusicTrackEndedEvent(std::string p)
+        : Event(events::EventCategory::Audio), path(std::move(p)) {
+    }
+};
 
 class AudioMusicPlayer {
 public:
@@ -85,9 +95,11 @@ public:
     void setEventLog(AudioEventLog* log) noexcept {
         m_events = log;
     }
+    void setEventBus(events::EventBus* bus) noexcept;
 
 private:
     AudioEventLog* m_events = nullptr;
+    events::EventBus* m_eventBus = nullptr;
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

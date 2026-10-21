@@ -1,5 +1,6 @@
 #pragma once
 
+#include <empire/engine/core/events/Event.h>
 #include <empire/engine/util/Handle.h>
 
 #include <cstdint>
@@ -26,10 +27,19 @@ enum class VoiceStopReason : std::uint8_t {
     Stopped,   // user called stopVoice()
 };
 
-struct VoiceFinishEvent {
+struct VoiceFinishEvent : public events::Event {
     VoiceHandle handle{};
     std::uint32_t soundGroupKey =
         0;  // opaque id of the SoundId this voice was playing
     VoiceStopReason reason = VoiceStopReason::Finished;
+
+    VoiceFinishEvent() : Event(events::EventCategory::Audio) {
+    }
+    VoiceFinishEvent(VoiceHandle h, std::uint32_t key, VoiceStopReason r)
+        : Event(events::EventCategory::Audio),
+          handle(h),
+          soundGroupKey(key),
+          reason(r) {
+    }
 };
 }  // namespace empire::audio

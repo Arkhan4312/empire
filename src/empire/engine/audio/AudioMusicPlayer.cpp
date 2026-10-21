@@ -49,6 +49,7 @@ enum class SlotState : std::uint8_t {
 
 struct AudioMusicPlayer::Impl {
     AudioEventLog* events;
+    events::EventBus* eventBus = nullptr;
     struct Slot {
         detail::MaDecoder decoder;
         detail::MaSound sound;
@@ -585,6 +586,11 @@ void AudioMusicPlayer::update(float dt) {
             continue;
         }
         if (s.path == m_impl->currentPath) {
+            events::EventBus* bus =
+                m_impl->eventBus ? m_impl->eventBus : events::defaultEventBus();
+            if (bus) {
+                bus->emplaceDeferred<MusicTrackEndedEvent>(s.path);
+            }
             m_impl->currentPath.clear();
         }
         m_impl->destroySlotContents(s);
@@ -658,5 +664,10 @@ void AudioMusicPlayer::onAfterMigration() {
         }
     }
 }
-
+void AudioMusicPlayer::setEventBus(events::EventBus* bus) noexcept {
+    m_eventBus = bus;
+    if (m_impl) {
+        m_impl->eventBus = bus;
+    }
+}
 }  // namespace empire::audio

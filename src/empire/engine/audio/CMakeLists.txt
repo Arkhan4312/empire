@@ -25,6 +25,7 @@ empire_add_module(engine_audio
 		empire::includes
 		empire::engine::log
 		empire::engine::util
+		empire::engine::core
 		miniaudio_headers
 		nlohmann_json::nlohmann_json
 )

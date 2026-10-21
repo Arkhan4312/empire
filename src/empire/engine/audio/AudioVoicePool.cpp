@@ -26,10 +26,6 @@ AudioVoicePool::~AudioVoicePool() {
     uninit();
 }
 
-void AudioVoicePool::setFinishedCallback(FinishedCallback fn) {
-    m_finished = std::move(fn);
-}
-
 // Lifecycle
 
 AudioResult<void> AudioVoicePool::init(ma_engine* engine) {
@@ -57,10 +53,14 @@ void AudioVoicePool::uninit() noexcept {
 // Handle / slot resolution
 
 AudioVoicePool::Slot* AudioVoicePool::slotFromHandle(VoiceHandle h) noexcept {
-    if (!h.isValid() || h.index >= m_slots.size()) {
+    if (!h.isValid()) {
         return nullptr;
     }
-    Slot& s = m_slots[h.index];
+    const std::uint32_t rawIdx = h.index - 1;
+    if (rawIdx >= m_slots.size()) {
+        return nullptr;
+    }
+    Slot& s = m_slots[rawIdx];
     if (s.state == SlotState::Free || s.generation != h.generation) {
         return nullptr;
     }
@@ -134,7 +134,8 @@ void AudioVoicePool::releaseSlot(Slot& s, VoiceStopReason reason,
     }
 
     // Snapshot everything we need for the event BEFORE we mutate.
-    const std::uint32_t idx = static_cast<std::uint32_t>(&s - m_slots.data());
+    const std::uint32_t rawIdx =
+        static_cast<std::uint32_t>(&s - m_slots.data());
     const std::uint32_t oldGen = s.generation;
     const std::uint32_t key = s.soundGroupKey;
 
@@ -160,9 +161,9 @@ void AudioVoicePool::releaseSlot(Slot& s, VoiceStopReason reason,
         --m_activeCount;
     }
 
-    if (emitEvent && m_finished) {
+    if (emitEvent) {
         m_pendingEvents.push_back(
-            VoiceFinishEvent{VoiceHandle{idx, oldGen}, key, reason});
+            VoiceFinishEvent{VoiceHandle{rawIdx + 1, oldGen}, key, reason});
     }
 }
 
@@ -307,8 +308,9 @@ VoiceStartOutcome AudioVoicePool::start(const VoiceStartDesc& desc) {
         return out;
     }
 
-    const std::uint32_t idx = static_cast<std::uint32_t>(slot - m_slots.data());
-    out.handle = VoiceHandle{idx, slot->generation};
+    const std::uint32_t rawIdx =
+        static_cast<std::uint32_t>(slot - m_slots.data());
+    out.handle = VoiceHandle{rawIdx + 1, slot->generation};
     out.result = VoiceStartResult::Started;
     firePending();
     return out;
@@ -352,15 +354,20 @@ void AudioVoicePool::update(float /*dt*/) {
 }
 
 void AudioVoicePool::firePending() {
-    if (!m_finished || m_pendingEvents.empty()) {
-        m_pendingEvents.clear();
+    if (m_pendingEvents.empty()) {
         return;
     }
 
+    events::EventBus* bus = m_eventBus ? m_eventBus : events::defaultEventBus();
+
     std::vector<VoiceFinishEvent> batch;
     batch.swap(m_pendingEvents);
+    if (!bus) {
+        return;
+    }
     for (const auto& ev : batch) {
-        m_finished(ev);
+        bus->emplaceDeferred<VoiceFinishEvent>(ev.handle, ev.soundGroupKey,
+                                               ev.reason);
     }
 }
 

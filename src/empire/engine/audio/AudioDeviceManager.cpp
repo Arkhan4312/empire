@@ -54,6 +54,7 @@ int findDefaultIndex(const std::vector<ma_device_info>& list) noexcept {
 
 struct AudioDeviceManager::Impl {
     AudioEventLog* events;
+    events::EventBus* eventBus = nullptr;
     detail::MaLog log;
     detail::MaContext context;
     detail::MaResourceManager resourceManager;
@@ -100,14 +101,11 @@ struct AudioDeviceManager::Impl {
 
     AudioDeviceManager::BeforeMigrationFn beforeCallback;
     AudioDeviceManager::AfterMigrationFn afterCallback;
-    AudioDeviceManager::MigrationCallback migrationCallback;
-
     bool ready() const noexcept {
         return engine.isValid();
     }
 
     // Helpers
-
     AudioResult<void> refreshDeviceList() {
         ma_device_info* pPlayback = nullptr;
         ma_uint32 count = 0;
@@ -294,8 +292,14 @@ struct AudioDeviceManager::Impl {
                 hadSuccessfulEngine = false;
             }
         }
-        if (migrationCallback) {
-            migrationCallback(ev);
+        {
+            events::EventBus* bus =
+                eventBus ? eventBus : events::defaultEventBus();
+            if (bus) {
+                bus->emplaceDeferred<MigrationEvent>(ev.reason, ev.oldDevice,
+                                                     ev.newDevice, ev.success,
+                                                     ev.error);
+            }
         }
 
         return success ? AudioResult<void>::ok()
@@ -478,12 +482,12 @@ struct AudioDeviceManager::Impl {
         followsDefault = true;
         explicitIndex = -1;
 
-        // Initial migration. Reason = Initial, so consumer knows thi isn't a
-        // recovery.
+        // Initial migration. Reason = Initial, so consumer knows thi isn't
+        // a recovery.
         auto migResult = migrate(MigrationReason::Initial);
 
-        // Even on failure, we keep context + RM alive so update() can retry.
-        // Caller checks ready() to decide whether to use audio.
+        // Even on failure, we keep context + RM alive so update() can
+        // retry. Caller checks ready() to decide whether to use audio.
         return migResult;
     }
 
@@ -536,6 +540,10 @@ struct AudioDeviceManager::Impl {
                              static_cast<std::uint32_t>(currentIndex), 0);
             }
             GAME_LOG_CH_WARN(channels::kDevice, "current device lost");
+            if (auto* bus = eventBus ? eventBus : events::defaultEventBus()) {
+                bus->emplaceDeferred<DeviceLostEvent>(currentIndex);
+            }
+
             requestMigration(MigrationReason::CurrentLost);
             return;
         }
@@ -672,9 +680,10 @@ void AudioDeviceManager::setAfterMigration(AfterMigrationFn fn) {
     }
 }
 
-void AudioDeviceManager::setMigrationCallback(MigrationCallback fn) {
+void AudioDeviceManager::setEventBus(events::EventBus* bus) noexcept {
+    m_eventBus = bus;
     if (m_impl) {
-        m_impl->migrationCallback = std::move(fn);
+        m_impl->eventBus = bus;
     }
 }
 

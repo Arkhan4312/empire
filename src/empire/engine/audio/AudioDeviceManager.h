@@ -3,6 +3,7 @@
 #include <empire/engine/audio/AudioError.h>
 #include <empire/engine/audio/AudioEventLog.h>
 #include <empire/engine/audio/detail/MiniAudio.h>
+#include <empire/engine/core/events/EventBus.h>
 
 #include <functional>
 #include <memory>
@@ -23,14 +24,34 @@ enum class MigrationReason {
     FallbackRetry,   // internal retry after a failed migration
 };
 
-struct MigrationEvent {
+struct MigrationEvent : public events::Event {
     MigrationReason reason = MigrationReason::Initial;
     int oldDevice = -1;
     int newDevice = -1;
     bool success = false;
     AudioError error = AudioError::NotInitialized;
+
+    MigrationEvent() : Event(events::EventCategory::Audio) {
+    }
+    MigrationEvent(MigrationReason r, int oldD, int newD, bool ok,
+                   AudioError err)
+        : Event(events::EventCategory::Audio),
+          reason(r),
+          oldDevice(oldD),
+          newDevice(newD),
+          success(ok),
+          error(err) {
+    }
 };
 
+struct DeviceLostEvent : public events::Event {
+    int deviceIndex = -1;
+    DeviceLostEvent() : Event(events::EventCategory::Audio) {
+    }
+    explicit DeviceLostEvent(int idx)
+        : Event(events::EventCategory::Audio), deviceIndex(idx) {
+    }
+};
 // Owns context + resource manager + engine. Device migration recreates the
 // engine but NOT the resource manager - decoded buffers survive. Consumers of
 // the engine (bus groups, voice pools, music player) rebuild their miniaudio
@@ -84,13 +105,9 @@ public:
     // called if no engine is available.
     using AfterMigrationFn = std::function<void()>;
 
-    // Called after every migration attempt - success or failure.
-    using MigrationCallback = std::function<void(const MigrationEvent&)>;
-
     void setBeforeMigration(BeforeMigrationFn fn);
     void setAfterMigration(AfterMigrationFn fn);
-    void setMigrationCallback(MigrationCallback fn);
-
+    void setEventBus(events::EventBus* bus) noexcept;
     // Tuning (tests / advanced)
     void setPollInterval(float seconds);
     float pollInterval() const noexcept;
@@ -115,6 +132,7 @@ public:
 
 private:
     AudioEventLog* m_events = nullptr;
+    events::EventBus* m_eventBus = nullptr;
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };
